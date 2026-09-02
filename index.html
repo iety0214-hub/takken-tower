@@ -352,7 +352,7 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
       <div class="modes">
         <button class="mode hot" data-go="stage"><div class="mode-ico">🏗</div><div class="mode-b"><strong>ステージ</strong><span>科目を選んで10問。ライフ3、落としたら最初から</span></div><div class="mode-go">›</div></button>
         <button class="mode" data-go="ta"><div class="mode-ico">⏱</div><div class="mode-b"><strong>タイムアタック</strong><span>60秒で何問。正答率でガチャ券のランクが決まる</span></div><div class="mode-go">›</div></button>
-        <button class="mode" data-go="pq"><div class="mode-ico">📜</div><div class="mode-b"><strong>鬼レベル模試</strong><span>2セットから選んで45問通し。ライフなしの本番形式</span></div><div class="mode-go">›</div></button>
+        <button class="mode" data-go="pq"><div class="mode-ico">📜</div><div class="mode-b"><strong>鬼レベル模試</strong><span id="pqSub">2セットから選んで45問通し。週1回だけ</span></div><div class="mode-go">›</div></button>
         <button class="mode" data-go="rank"><div class="mode-ico">🏆</div><div class="mode-b"><strong>順位表</strong><span>髙田・長谷川・佐藤・川合の4人で競う</span></div><div class="mode-go">›</div></button>
         <button class="mode" data-go="gacha"><div class="mode-ico">🎁</div><div class="mode-b"><strong>ガチャ</strong><span>街の風景・称号・アイコンを解放する</span></div><div class="mode-go">›</div></button>
         <button class="mode" data-go="coll"><div class="mode-ico">🗂</div><div class="mode-b"><strong>コレクション</strong><span>手に入れたものを装備する</span></div><div class="mode-go">›</div></button>
@@ -401,7 +401,9 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
         <div id="tkRule"></div>
         <div style="margin-top:11px;padding-top:11px;border-top:1px dashed var(--line);color:var(--muted);font-size:11.5px">
           通算正解30問ごとに1枚もらえる。ランクは上の表で抽選される。<br>
-          タイムアタックは<b>自己ベストを更新したときだけ</b>1枚（5問以上解いた場合）。
+          タイムアタックは<b>自己ベストを更新したときだけ</b>1枚（5問以上解いた場合）。<br>
+          <b style="color:var(--rare)">レジェンド券</b>（S・RARE 75% / ULTRA 25%）は2つの方法でしか手に入らん —
+          鬼レベル模試で45問中38問以上、または毎週月曜11時の時点でタイムアタック1位。
         </div>
       </div>
     </div>
@@ -1662,9 +1664,11 @@ const TIERS = {
   bronze  :{n:"ブロンズ",  cost:100,  rank:1,  odds:{N:90,  R:9.5, SR:0.5, UR:0}},
   silver  :{n:"シルバー",  cost:300,  rank:4,  odds:{N:75,  R:22,  SR:2.8, UR:0.2}},
   gold    :{n:"ゴールド",  cost:600,  rank:7,  odds:{N:50,  R:42,  SR:7.5, UR:0.5}},
-  platinum:{n:"プラチナ",  cost:1200, rank:10, odds:{N:20,  R:55,  SR:22,  UR:3}}
+  platinum:{n:"プラチナ",  cost:1200, rank:10, odds:{N:20,  R:55,  SR:22,  UR:3}},
+  /* コインでは買えん。鬼レベル模試38点以上と、週間タイムアタック1位でしか手に入らん */
+  legend  :{n:"レジェンド", cost:null, rank:1,  odds:{N:0,   R:0,   SR:75,  UR:25}}
 };
-const TIER_ORDER = ["bronze","silver","gold","platinum"];
+const TIER_ORDER = ["bronze","silver","gold","platinum","legend"];
 
 /* ══════════════════════════════════════════════════════
    称号ランク
@@ -1729,6 +1733,35 @@ function equippedTitle(){
 
 /* ガチャ券：通算正解が TK_NEED 問たまるごとに1枚。
    券のランクは称号ランクの帯ごとの抽選で決まる */
+/* ══════════════════════════════════════════════════════
+   週の区切り
+   毎週月曜11:00（この端末の時計）を境目にする。
+   「いまはどの週か」を "2026-09-01" のような月曜の日付で表す
+   ══════════════════════════════════════════════════════ */
+function weekStart(now){
+  const d = new Date(now||Date.now());
+  const back = (d.getDay()+6)%7;                 // 月曜からの経過日数
+  const mon = new Date(d); mon.setDate(d.getDate()-back); mon.setHours(11,0,0,0);
+  if(mon>d) mon.setDate(mon.getDate()-7);        // まだ月曜11時前なら前の週
+  return mon;
+}
+const weekKey = now => dayKey(weekStart(now));
+/* 次の月曜11時まであとどれくらいか */
+function toNextWeek(now){
+  const nx = new Date(weekStart(now)); nx.setDate(nx.getDate()+7);
+  const ms = nx - new Date(now||Date.now());
+  const h = Math.floor(ms/3600000), d = Math.floor(h/24);
+  return d>0 ? d+"日"+(h%24)+"時間" : h>0 ? h+"時間"+Math.floor(ms%3600000/60000)+"分"
+                                          : Math.max(1,Math.floor(ms/60000))+"分";
+}
+/* 週またぎの記録置き場。own は jsonb でそのまま同期されるけん間借りしとる。
+   （theme/title/icon 以外のキーはどこからも読まれんので混ざらん） */
+function meta(){
+  S.own = S.own || {};
+  if(!S.own.meta || typeof S.own.meta!=="object") S.own.meta = {};
+  return S.own.meta;
+}
+
 const TK_NEED = 30;
 const TK_MIX = [
   {maxRank:3,  odds:{bronze:100}},
@@ -1761,7 +1794,7 @@ let ME = null;
 
 const fresh = ()=>({
   coin:0, answered:0,
-  tk:{bronze:0,silver:0,gold:0,platinum:0},
+  tk:{bronze:0,silver:0,gold:0,platinum:0,legend:0},
   totalCorrect:0, sinceTk:0,
   own:{theme:["dawn"],title:["t0"],icon:["i0"]},
   eq:{theme:"dawn",title:"t0",icon:"i0"},
@@ -1826,6 +1859,23 @@ async function pullAll(){
   catch(e){ sbOk=false; return null; }
 }
 /* 起動時、サーバ側が進んでいればそちらを採用する（別端末で解いた分を拾う） */
+/* 毎週月曜11時をまたいだら、その時点のタイムアタック1位にレジェンド券を配る。
+   サーバが無いので、各自がアプリを開いたときに自分が1位かどうかを見て受け取る形。
+   同点なら全員もらえる。1度見たらその週はもう配らん */
+function checkWeeklyTa(rows){
+  const wk = weekKey();
+  if(meta().taWeek === wk) return false;      // 今週ぶんは確認済み
+  meta().taWeek = wk;
+  const best = Math.max(0, ...rows.map(r=>r.best_ta||0));
+  const mine = Math.max(S.bestTa||0, (rows.find(r=>r.name===ME)||{}).best_ta||0);
+  if(best>0 && mine>=best){
+    ensureTk(); S.tk.legend++;
+    toast("👑 先週のタイムアタック1位　🎟 レジェンド券をもらった");
+  }
+  save();
+  return true;
+}
+
 async function pullMe(){
   const rows=await pullAll(); if(!rows) return;
   TEAM=rows;
@@ -1842,8 +1892,9 @@ async function pullMe(){
     });
     try{ localStorage.setItem(KEY_OF(ME),JSON.stringify(S)); }catch(e){}
     ensureDaily(); syncHud();
-    if(!document.getElementById("sHome").classList.contains("hidden")) renderHome();
   }
+  if(checkWeeklyTa(rows)) syncHud();
+  if(!document.getElementById("sHome").classList.contains("hidden")) renderHome();
 }
 
 
@@ -1934,7 +1985,8 @@ addEventListener("resize",()=>{ if(!document.getElementById("sHome").classList.c
 const $=id=>document.getElementById(id);
 let toastT;
 function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("on"); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove("on"),2100); }
-function totalTk(){ return TIER_ORDER.reduce((a,k)=>a+S.tk[k],0); }
+function ensureTk(){ TIER_ORDER.forEach(k=>{ if(typeof S.tk[k]!=="number") S.tk[k]=0; }); }
+function totalTk(){ ensureTk(); return TIER_ORDER.reduce((a,k)=>a+S.tk[k],0); }
 function syncHud(){
   ensureTitles();
   $("hLv").textContent=myRank(); $("hCoin").textContent=S.coin; $("hTk").textContent=totalTk();
@@ -2115,6 +2167,11 @@ function renderHome(){
   const rest=toNextRank(S.totalCorrect);
   $("nextXp").textContent = rest===null ? "最上位" : "あと"+rest+"問";
 
+  const ps=$("pqSub");
+  if(ps) ps.textContent = pqLocked()
+    ? "今週はもう受けとる。次は"+toNextWeek()+"後（月曜11時）"
+    : "45問通し・週1回だけ。"+PQ_PASS+"問以上でレジェンド券";
+
   const mix=mixFor(myRank());
   $("tkHint").textContent="あと"+(TK_NEED-S.sinceTk)+"問で券が1枚";
   $("tkRule").innerHTML = TK_MIX.map((m,i)=>{
@@ -2159,8 +2216,28 @@ function startStage(cat){
   show("sQuiz"); renderQ();
 }
 /* 鬼レベル模試モード：セットを選んで問1〜45を順に。ライフなしの本番形式 */
+const PQ_PASS = 38;          // これ以上でレジェンド券
+function pqLocked(){ return meta().pqWeek === weekKey(); }
+
 function choosePq(){
   const years=[...new Set(PQ.map(q=>q.y))];
+  if(pqLocked()){
+    $("sRes").innerHTML =
+      '<div class="sec-h" style="margin-top:18px"><h2>鬼レベル模試</h2><span class="eyebrow">週1回まで</span></div>'
+      +'<div class="card" style="text-align:center;padding:26px 18px">'
+        +'<div style="font-size:34px">🔒</div>'
+        +'<div class="dsp" style="font-size:17px;margin-top:10px">今週はもう受けとる</div>'
+        +'<div style="font-size:12.5px;color:var(--muted);margin-top:10px;line-height:1.9">'
+          +'鬼レベル模試は<b>週に1回</b>だけ。<br>次に受けられるのは<b>'+toNextWeek()+'後</b>（月曜11時）っちゃ。'
+        +'</div>'
+      +'</div>'
+      +'<div class="card" style="margin-top:12px;font-size:11.5px;color:var(--muted);line-height:1.85">'
+        +'45問中<b>'+PQ_PASS+'問以上</b>正解すると、S・RAREかULTRAが確定で出る<b>レジェンド券</b>がもらえる。<br>'
+        +'一発勝負やけん、ステージや過去問で仕上げてから挑むとよか。'
+      +'</div>'
+      +'<div class="stack"><button class="btn btn-g" data-go="home">もどる</button></div>';
+    show("sRes"); return;
+  }
   $("sRes").innerHTML =
     '<div class="sec-h" style="margin-top:18px"><h2>鬼レベル模試を選ぶ</h2><span class="eyebrow">45問 / ライフなし</span></div>'
     +'<div class="modes">'+years.map(y=>{
@@ -2174,6 +2251,7 @@ function choosePq(){
     +'<div class="card" style="margin-top:14px;font-size:11.5px;color:var(--muted);line-height:1.85">'
       +'本試験の難問を寄せ集めた45問セット。令和8年4月1日施行の法令に合わせて改訂してある。<br>'
       +'問46〜50の5点免除科目は入れとらん。90問すべてに肢ごとの解説が付いとる。<br>'
+      +'<b style="color:var(--amber)">受けられるのは週に1回だけ。'+PQ_PASS+'問以上でレジェンド券がもらえる。</b><br>'
       +'本試験17回分そのものは、ステージとタイムアタックに入っとる。'
     +'</div>'
     +'<div class="stack"><button class="btn btn-g" data-go="home">もどる</button></div>';
@@ -2181,6 +2259,9 @@ function choosePq(){
   $("sRes").querySelectorAll("[data-year]").forEach(b=>b.addEventListener("click",()=>startPq(b.dataset.year)));
 }
 function startPq(year){
+  if(pqLocked()) return choosePq();
+  meta().pqWeek = weekKey();          // 始めた時点で今週分を使ったことにする
+  save();
   const list=PQ.filter(q=>q.y===year).slice().sort((a,b)=>a.n-b.n);
   G={mode:"pq",year,list,i:0,answered:0,correct:0,combo:0,maxCombo:0,lives:0,coin:0,log:[]};
   show("sQuiz"); renderQ();
@@ -2322,6 +2403,10 @@ function finish(){
   const pqLine = G.mode==="pq" ? Math.round(28/45*G.list.length) : 0;
   const pqPass = G.mode==="pq" && G.correct>=pqLine;
 
+  // 鬼レベル模試で規定点に届いたらレジェンド券
+  let pqLegend=false;
+  if(G.mode==="pq" && G.correct>=PQ_PASS){ ensureTk(); S.tk.legend++; pqLegend=true; }
+
   // タイムアタックは自己ベストを更新したときだけチケットが出る
   let taTk=null, taBest=false;
   if(G.mode==="ta" && asked>=5 && G.correct>S.bestTa){
@@ -2357,6 +2442,10 @@ function finish(){
               +'<div class="num" style="font-size:14px;font-weight:700">'+b.c+' / '+b.t+'</div></div>';
           }).join("")
         +'</div></div>':'')
+    +(pqLegend?'<div class="ticket-won" style="border-color:var(--rare);background:rgba(155,93,229,.10)">'
+        +'<div class="eyebrow" style="color:var(--rare)">'+PQ_PASS+'問以上 達成</div>'
+        +'<div class="dsp" style="font-size:18px;margin-top:4px;color:var(--rare)">🎟 レジェンド券</div>'
+        +'<div style="font-size:11.5px;color:var(--muted);margin-top:4px">S・RAREかULTRAが確定で出る</div></div>':'')
     +(taTk?'<div class="ticket-won"><div class="eyebrow" style="color:var(--amber)">自己ベスト更新（'+G.correct+'問）</div>'
         +'<div class="dsp" style="font-size:18px;margin-top:4px">🎟 '+TIERS[taTk].n+'券</div></div>'
         :(taBest?'<div class="ticket-won"><div class="eyebrow" style="color:var(--amber)">自己ベスト更新</div></div>':''))
@@ -2398,6 +2487,7 @@ function chooseCat(){
 function renderGacha(){
   show("sGacha");
   $("gCoin").textContent="🪙 "+S.coin;
+  ensureTk();
   $("gTiers").innerHTML=TIER_ORDER.map(k=>{
     const t=TIERS[k], lock=myRank()<t.rank;
     const od=t.odds;
@@ -2406,7 +2496,9 @@ function renderGacha(){
       +'<div class="gt-odds">N '+od.N+'%　R '+od.R+'%　SR '+od.SR+'%　UR '+od.UR+'%</div>'
       +'<div class="gt-acts">'
         +'<button class="pri" data-pull="'+k+'" data-pay="tk"'+((lock||!S.tk[k])?' disabled':'')+'>チケットで引く</button>'
-        +'<button data-pull="'+k+'" data-pay="coin"'+((lock||S.coin<t.cost)?' disabled':'')+'>🪙 '+t.cost+'</button>'
+        +(t.cost==null
+            ? '<button disabled title="コインでは買えん">買えん</button>'
+            : '<button data-pull="'+k+'" data-pay="coin"'+((lock||S.coin<t.cost)?' disabled':'')+'>🪙 '+t.cost+'</button>')
       +'</div>'
       +(lock?'<div class="gt-lock">ランク'+t.rank+'で解放</div>':'')
     +'</div>';
@@ -2421,8 +2513,8 @@ function pickRarity(odds){
 }
 function pull(tier,pay){
   const t=TIERS[tier];
-  if(pay==="tk"){ if(!S.tk[tier]) return; S.tk[tier]--; }
-  else{ if(S.coin<t.cost) return; S.coin-=t.cost; }
+  if(pay==="tk"){ ensureTk(); if(!S.tk[tier]) return; S.tk[tier]--; }
+  else{ if(t.cost==null || S.coin<t.cost) return; S.coin-=t.cost; }
   let rar=pickRarity(t.odds);
   // そのレアリティに未所持がなければ下位へ落として、なければ重複扱い
   // 称号は通算正解数で解放されるので、ガチャの排出からは外しとる
@@ -2430,7 +2522,9 @@ function pull(tier,pay){
   let cand=[];
   const byRar=r=>{ let a=[]; kinds.forEach(k=>POOL[k].filter(i=>i.r===r).forEach(i=>a.push({k,i}))); return a; };
   const order=["UR","SR","R","N"], start=order.indexOf(rar);
-  for(let s=start;s<order.length;s++){
+  // レジェンド券はSR未満に落とさん。全部そろっとったら重複でもSR以上を出す
+  const floor = tier==="legend" ? order.indexOf("SR") : order.length-1;
+  for(let s=start;s<=floor;s++){
     const un=byRar(order[s]).filter(x=>!S.own[x.k].includes(x.i.id));
     if(un.length){ cand=un; rar=order[s]; break; }
   }
