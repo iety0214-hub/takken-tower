@@ -47,6 +47,18 @@
 .plan-tp b{color:#FFFFFF}
 .plan-tp button{flex:none;font:inherit;font-size:10.5px;color:#CBBBFF;background:rgba(142,107,255,.22);border:0;border-radius:8px;padding:5px 9px;cursor:pointer}
 .plan-bar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#8E6BFF,#B9A3FF);transition:width .4s ease}
+.plan-kv{display:flex;gap:6px;margin-top:11px}
+.plan-kv span{flex:1;background:rgba(255,255,255,.06);border-radius:10px;padding:7px 4px;text-align:center;font-size:10px;color:#CFC6EA;line-height:1.35}
+.plan-kv b{display:block;font-family:"Chivo Mono",ui-monospace,monospace;font-size:16px;color:#FFFFFF;margin-bottom:1px}
+.plan-today{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;margin-top:11px;padding:15px 16px;border:0;border-radius:14px;background:linear-gradient(135deg,#8E6BFF,#6A45D8);color:#FFFFFF;font:inherit;text-align:left;cursor:pointer;box-shadow:0 8px 20px rgba(124,77,255,.35)}
+.plan-today strong{display:block;font-size:17px;font-weight:900;letter-spacing:.02em}
+.plan-today span{display:block;font-size:11px;opacity:.85;margin-top:3px}
+.plan-today-go{font-size:24px;flex:none}
+.plan-today.done{background:linear-gradient(135deg,#2FB58E,#1E8F6E);box-shadow:0 8px 20px rgba(34,195,166,.30)}
+.plan-more{display:block;width:100%;margin-top:6px;background:none;border:0;color:#A79BD6;font:inherit;font-size:11.5px;padding:7px;cursor:pointer}
+.links{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:10px}
+.links button{font:inherit;font-size:11px;padding:9px 2px;border-radius:11px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;white-space:nowrap}
+.chip{cursor:pointer}
 .plan-tiles{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:9px}
 .plan-tile{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:10px 11px;text-align:left;color:inherit;font:inherit;cursor:pointer}
 .plan-tile small{display:block;font-size:9.5px;color:#A79BD6;margin-bottom:3px}
@@ -374,8 +386,15 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
             <div class="plan-pct"><div class="v" id="planPct">--</div><div class="s" id="planGap">目安</div></div>
           </div>
           <div class="plan-bar"><i id="planBar" style="width:0%"></i></div>
-          <div id="planCd"></div>
+          <div class="plan-kv" id="planKv"></div>
         </div>
+        <button class="plan-today" id="planToday">
+          <div><strong>きょうの10問</strong><span id="planTodayS">復習・弱点・過去問を混ぜて出す</span></div>
+          <div class="plan-today-go">›</div>
+        </button>
+        <button class="plan-more" id="planMore">くわしく ▾</button>
+        <div id="planDetail" class="hidden">
+          <div id="planCd"></div>
         <div class="plan-tiles">
           <button class="plan-tile" id="planTileAvg"><small>科目バランス</small><b id="planAvg">平均スコア --</b></button>
           <button class="plan-tile" id="planTileWeak"><small>重点科目</small><b id="planWeak">弱点を確認</b></button>
@@ -399,22 +418,37 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
           <div><strong>きょうの一言</strong><p id="planTip"></p></div>
         </div>
         <p class="plan-note" id="planNote"></p>
+        </div>
       </div>
     </div>
 
     <div class="sec">
       <div class="sec-h"><h2>モード</h2><span class="eyebrow" id="tkHint"></span></div>
       <div class="modes">
-        <button class="mode hot" data-go="stage"><div class="mode-ico">🏗</div><div class="mode-b"><strong>ステージ</strong><span>科目を選んで10問。ライフ3、落としたら最初から</span></div><div class="mode-go">›</div></button>
-        <button class="mode" data-go="ox"><div class="mode-ico">⭕</div><div class="mode-b"><strong>肢別 ○×</strong><span>1肢ずつ○か×か。20本で1セット。間違えた肢の問は復習に入る</span></div><div class="mode-go">›</div></button>
-        <button class="mode" data-go="ta"><div class="mode-ico">⏱</div><div class="mode-b"><strong>タイムアタック</strong><span>60秒で何問。正答率でガチャ券のランクが決まる</span></div><div class="mode-go">›</div></button>
+        <button class="mode hot" data-go="stage"><div class="mode-ico">🏗</div><div class="mode-b"><strong>ステージ</strong><span>科目を選んで10問。ライフ3</span></div><div class="mode-go">›</div></button>
+        <button class="mode" data-go="ox"><div class="mode-ico">⭕</div><div class="mode-b"><strong>肢別 ○×</strong><span>1肢ずつ○か×か。20本で1セット</span></div><div class="mode-go">›</div></button>
+        <button class="mode" data-go="ta"><div class="mode-ico">⏱</div><div class="mode-b"><strong>タイムアタック</strong><span>60秒で何問解けるか</span></div><div class="mode-go">›</div></button>
         <button class="mode" data-go="pq"><div class="mode-ico">📜</div><div class="mode-b"><strong>鬼レベル模試</strong><span id="pqSub">2セットから選んで45問通し。週1回だけ</span></div><div class="mode-go">›</div></button>
-        <button class="mode" data-go="rank"><div class="mode-ico">🏆</div><div class="mode-b"><strong>順位表</strong><span>髙田・長谷川・佐藤・川合の4人で競う</span></div><div class="mode-go">›</div></button>
-        <button class="mode" data-go="gacha"><div class="mode-ico">🎁</div><div class="mode-b"><strong>ガチャ</strong><span>街の風景・称号・アイコンを解放する</span></div><div class="mode-go">›</div></button>
-        <button class="mode" data-go="coll"><div class="mode-ico">🗂</div><div class="mode-b"><strong>コレクション</strong><span>手に入れたものを装備する</span></div><div class="mode-go">›</div></button>
+      </div>
+      <div class="links">
+        <button data-go="rank">🏆 順位表</button>
+        <button data-go="gacha">🎁 ガチャ</button>
+        <button data-go="coll">🗂 コレクション</button>
+        <button data-go="log">📈 記録</button>
       </div>
     </div>
 
+    <div class="sec">
+      <div class="sec-h"><h2>今日のミッション</h2><span class="eyebrow" id="misDate"></span></div>
+      <div class="card" id="misList"></div>
+    </div>
+  </section>
+
+  <!-- ══ 記録 ══ -->
+  <section id="sLog" class="hidden">
+    <div class="sec">
+      <div class="sec-h" style="margin-top:6px"><h2>記録</h2><span class="eyebrow" id="logStreak"></span></div>
+    </div>
     <div class="sec">
       <div class="sec-h"><h2>学習時間</h2><span class="eyebrow">画面を見とる間だけ計測</span></div>
       <div class="bigbox"><div class="bigbox-l">きょうの学習時間</div><div class="bigbox-v" id="todaySec">0時間0分</div></div>
@@ -426,7 +460,6 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
         <div class="chartwrap"><svg id="weekChart" viewBox="0 0 340 176" role="img" aria-label="曜日ごとの学習時間"></svg></div>
       </div>
     </div>
-
     <div class="sec">
       <div class="sec-h"><h2>制覇状況（全期間）</h2><span class="eyebrow">通算 <b id="totalSec" class="num">0時間0分</b></span></div>
       <div class="card" style="display:flex;gap:16px;align-items:center">
@@ -440,17 +473,10 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
         </div>
       </div>
     </div>
-
-    <div class="sec">
-      <div class="sec-h"><h2>今日のミッション</h2><span class="eyebrow" id="misDate"></span></div>
-      <div class="card" id="misList"></div>
-    </div>
-
     <div class="sec">
       <div class="sec-h"><h2>科目別の仕上がり</h2><span class="eyebrow">正答率</span></div>
       <div class="cats" id="catStats"></div>
     </div>
-
     <div class="sec">
       <div class="sec-h"><h2>ガチャ券の貯まり方</h2></div>
       <div class="card" style="font-size:12.5px;color:#4A4160;line-height:1.9">
@@ -463,7 +489,6 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
         </div>
       </div>
     </div>
-
     <p class="foot">
       収録：権利関係・法令上の制限・税その他（税金）・宅建業法の4科目。<br>
       ステージとタイムアタックは全1,014問から出る（オリジナル演習256＋本試験17回分758）。<br>
@@ -472,6 +497,7 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
       5点免除科目（住宅金融支援機構法／景品表示法／統計／土地／建物＝本試験 問46〜50）は収録していません。<br>
       解説は2026年8月時点の現行法にもとづく。進捗はこの端末のブラウザにのみ保存されます。
     </p>
+    <div class="stack"><button class="btn btn-g" data-go="home">ホームへ</button></div>
   </section>
 
   <!-- ══ クイズ ══ -->
@@ -1959,6 +1985,74 @@ function topicHtml(){
     +'<button id="planTp">この論点で10問 ›</button></div>';
 }
 
+/* ══════════════════════════════════════════════════════
+   連続日数（ストリーク）
+   own.meta.streak = {n:連続日数, d:最後に解いた日, q:その日に解いた問数}
+   ══════════════════════════════════════════════════════ */
+function streak(){
+  const m=meta();
+  if(!m.streak || typeof m.streak!=="object") m.streak={n:0,d:"",q:0};
+  return m.streak;
+}
+const yesterdayKey = ()=>{ const y=new Date(); y.setDate(y.getDate()-1); return dayKey(y); };
+function bumpStreak(){
+  const st=streak(), t=today();
+  if(st.d!==t){
+    st.n = (st.d===yesterdayKey()) ? (st.n||0)+1 : 1;
+    st.d=t; st.q=0;
+  }
+  st.q=(st.q||0)+1;
+}
+/* 表示用。きょうも昨日も解いとらんなら0 */
+function streakNow(){
+  const st=streak();
+  return (st.d===today() || st.d===yesterdayKey()) ? (st.n||0) : 0;
+}
+const todayQ = ()=> streak().d===today() ? (streak().q||0) : 0;
+
+/* ══════════════════════════════════════════════════════
+   きょうの10問
+   復習（最大4）→ 弱点論点か弱点科目（最大3）→ 直近10年の未着手 で10問。
+   いままでの STEP1 / STEP2 / 復習 / 論点 を1本にまとめただけ
+   ══════════════════════════════════════════════════════ */
+const TODAY_N = 10;
+function buildToday(){
+  const seen=S.seen||{}, used=new Set(), list=[], parts={rev:0,weak:0,recent:0,other:0};
+  const take=(arr,n,key)=>{
+    for(const q of arr){
+      if(list.length>=TODAY_N || n<=0) break;
+      const id=qid(q); if(used.has(id)) continue;
+      used.add(id); list.push(q); parts[key]++; n--;
+    }
+  };
+  take(missList(), 4, "rev");
+  const w=weakTopic();
+  if(w) take(shuffle(QPOOL.filter(q=>q.tp===w.k && !seen[qid(q)])), 3, "weak");
+  else  take(shuffle(QPOOL.filter(q=>q.cat===weakCat() && !seen[qid(q)])), 3, "weak");
+  take(shuffle(QPOOL.filter(q=>RECENT10.indexOf(q.y)>=0 && !seen[qid(q)])), TODAY_N, "recent");
+  take(shuffle(QPOOL), TODAY_N, "other");
+  return {list:shuffle(list), parts, weakName: w ? w.k : CATS[weakCat()].name};
+}
+function todayLabel(b){
+  const p=b.parts, a=[];
+  if(p.rev) a.push("復習"+p.rev);
+  if(p.weak) a.push(b.weakName+p.weak);
+  if(p.recent) a.push("直近過去問"+p.recent);
+  if(p.other) a.push("その他"+p.other);
+  return a.join("・");
+}
+function startToday(){
+  const b=buildToday();
+  G={mode:"stage",cat:null,today:true,list:b.list,i:0,answered:0,correct:0,combo:0,maxCombo:0,lives:3,coin:0};
+  show("sQuiz"); renderQ();
+}
+function renderLog(){
+  renderHome();          // 記録の中身もここで描いとる
+  show("sLog");
+  const n=streakNow();
+  $("logStreak").textContent = n ? "🔥 "+n+"日連続" : "きょう解いたら連続1日目";
+}
+
 const TK_NEED = 30;
 const TK_MIX = [
   {maxRank:3,  odds:{bronze:100}},
@@ -2202,7 +2296,7 @@ function syncHud(){
   $("hXp").style.width=Math.round(rankProgress(S.totalCorrect)*100)+"%";
 }
 function show(id){
-  ["sHome","sQuiz","sRes","sGacha","sColl","sRank","sAdmin"].forEach(s=>$(s).classList.toggle("hidden",s!==id));
+  ["sHome","sQuiz","sRes","sGacha","sColl","sRank","sAdmin","sLog"].forEach(s=>$(s).classList.toggle("hidden",s!==id));
   scrollTo(0,0); syncHud();
 }
 
@@ -2343,6 +2437,25 @@ function renderPlan(){
   $("planCd").innerHTML = paceHtml() + topicHtml();
   const tpBtn=$("planTp"); if(tpBtn) tpBtn.onclick=()=>startTopic(weakTopic().k);
 
+  // 連続日数・あと日数・きょう解いた数
+  const sn=streakNow(), days=daysToExam(), tq=todayQ();
+  $("planKv").innerHTML =
+    '<span><b>'+(sn?'🔥'+sn:'—')+'</b>'+(sn?'日連続':'きょうから')+'</span>'
+   +'<span><b>'+(days>=0?days:'—')+'</b>'+(days>0?'日で本試験':days===0?'きょう本試験':'本試験は終了')+'</span>'
+   +'<span><b>'+tq+'</b>きょう解いた</span>';
+
+  // きょうの10問ボタン
+  const b=buildToday();
+  const done = tq>=TODAY_N;
+  $("planToday").classList.toggle("done", done);
+  $("planToday").querySelector("strong").textContent = done ? "きょうのぶんは終わり" : "きょうの10問";
+  $("planTodayS").textContent = done ? "もう1セットやってもよか　"+todayLabel(b) : todayLabel(b);
+  $("planToday").onclick = startToday;
+  $("planMore").onclick = ()=>{
+    const d=$("planDetail"), open=d.classList.toggle("hidden");
+    $("planMore").textContent = open ? "くわしく ▾" : "とじる ▴";
+  };
+
   const ks=Object.keys(CATS);
   $("planAvg").textContent = "平均スコア "+Math.round(ks.reduce((a,k)=>a+catRate(k),0)/ks.length*100)+"%";
   const w=weakCat();
@@ -2358,7 +2471,7 @@ function renderPlan(){
   $("planS0s").textContent = mc+"問たまっとる　"+Math.min(REVIEW_N,mc)+"問ずつ解き直す";
   $("planS1").classList.toggle("done", d1>=PLAN_G1);
   $("planS2").classList.toggle("done", d2>=PLAN_G2);
-  $("planLead").textContent = (d1>=PLAN_G1 && d2>=PLAN_G2) ? "きょうのぶんは終わり" : "次の一歩が決まっとる";
+  $("planLead").textContent = todayQ()>=TODAY_N ? "きょうもよう頑張った" : "押すだけでよか";
   $("planTip").textContent = planTip(w,p,d1,d2);
   $("planNote").textContent = "合格予測は通算正答率("+(S.answered?Math.round(S.totalCorrect/S.answered*100):0)
     +"%)を、解いた範囲の広さで割り引いた目安。本試験の合否を保証するものではないっちゃ。";
@@ -2639,7 +2752,7 @@ function renderOx(){
 function answerOx(pick){
   if(G.locked) return;
   const it=G.list[G.i], q=it.q, ok=pick===it.truth;
-  G.locked=true; G.answered++;
+  G.locked=true; G.answered++; bumpStreak();
   $("qChoices").querySelectorAll(".ch").forEach(b=>{
     b.disabled=true;
     const isTrue=b.dataset.i==="1";
@@ -2709,7 +2822,7 @@ function answer(pick){
     else if(i===pick) b.classList.add("wrong");
   });
   S.stats[q.cat].t++; S.answered++;
-  tpStat(q).t++;
+  tpStat(q).t++; bumpStreak();
   ensurePlan();
   if(G.mode==="stage"){ if(G.drill) S.plan.s2++; else if(!G.review) S.plan.s1++; }
   G.byCat=G.byCat||{};
@@ -2803,7 +2916,7 @@ function finish(){
   const t=theme();
   $("sRes").innerHTML =
     '<div class="res card" style="border-color:'+(cleared||pqPass||G.mode==="ta"?"var(--amber)":"var(--line)")+'">'
-    +'<div class="eyebrow">'+(G.mode==="ta"?"TIME ATTACK":G.mode==="pq"?G.year:G.review?"REVIEW":(cleared?"STAGE CLEAR":"GAME OVER"))+'</div>'
+    +'<div class="eyebrow">'+(G.mode==="ta"?"TIME ATTACK":G.mode==="pq"?G.year:G.review?"REVIEW":G.today?"きょうの10問":(cleared?"STAGE CLEAR":"GAME OVER"))+'</div>'
     +'<div class="big">'+G.correct+'<small> / '+asked+'</small></div>'
     +'<div style="color:var(--muted);font-size:12px;margin-top:6px" class="num">正答率 '+rate+'%</div>'
     +'<div class="res-grid">'
@@ -2842,10 +2955,10 @@ function finish(){
       +'<button class="btn btn-g" data-go="rank">🏆 順位表を見る</button>'
       +'<button class="btn btn-g" data-go="home">ホームへ</button>'
     +'</div>';
-  const mode=G.mode, cat=G.cat, yr=G.year, drill=G.drill, review=G.review, topic=G.topic;
+  const mode=G.mode, cat=G.cat, yr=G.year, drill=G.drill, review=G.review, topic=G.topic, todayMode=G.today;
   show("sRes");
   $("rAgain").addEventListener("click",()=>
-    mode==="ta" ? startTa() : mode==="pq" ? startPq(yr) : review ? startReview() : topic ? startTopic(topic) : drill ? startDrill() : startStage(cat));
+    mode==="ta" ? startTa() : mode==="pq" ? startPq(yr) : review ? startReview() : topic ? startTopic(topic) : todayMode ? startToday() : drill ? startDrill() : startStage(cat));
 }
 
 /* ══════════════════════════════════════════════════════
@@ -3313,8 +3426,11 @@ document.addEventListener("click",e=>{
   else if(g==="home"){ clearInterval(timerId); isAdmin()?renderAdmin():renderHome(); }
   else if(g==="pick") renderPick(false);
   else if(g==="admin") renderAdmin();
+  else if(g==="log") renderLog();
 });
 $("hMe").addEventListener("click",()=>{ clearInterval(timerId); renderPick(false); });
+$("hCoin").parentElement.addEventListener("click",()=>{ if(ME && !isAdmin()){ clearInterval(timerId); renderGacha(); } });
+$("hTk").parentElement.addEventListener("click",()=>{ if(ME && !isAdmin()){ clearInterval(timerId); renderGacha(); } });
 $("qQuit").addEventListener("click",()=>{
   clearInterval(timerId);
   if(G && G.answered>0) finish();   // ここまでの分は結果に反映する
