@@ -2043,7 +2043,8 @@ function todayLabel(b){
 }
 function startToday(){
   const b=buildToday();
-  G={mode:"stage",cat:null,today:true,list:b.list,i:0,answered:0,correct:0,combo:0,maxCombo:0,lives:3,coin:0};
+  /* 日課にライフ制は要らん。何問間違えても10問は最後まで解かせる */
+  G={mode:"stage",cat:null,today:true,list:b.list,i:0,answered:0,correct:0,combo:0,maxCombo:0,lives:999,coin:0};
   show("sQuiz"); renderQ();
 }
 function renderLog(){
@@ -2629,7 +2630,10 @@ function startTa(){
 
 function paintStatus(){
   if(!G) return;
-  if(G.mode==="stage"){
+  if(G.mode==="stage" && G.lives>3){
+    $("qStatus").innerHTML='<div class="num" style="font-size:12px;color:var(--muted)">正解 '
+      +'<b style="color:var(--good);font-size:15px">'+G.correct+'</b> / '+G.answered+'</div>';
+  }else if(G.mode==="stage"){
     $("qStatus").innerHTML='<div class="lives">'+[0,1,2].map(i=>'<i class="'+(i<G.lives?'on':'')+'">🏠</i>').join("")+'</div>';
   }else if(G.mode==="ox"){
     $("qStatus").innerHTML='<div class="num" style="font-size:12px;color:var(--muted)">正解 '
