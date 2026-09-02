@@ -58,6 +58,28 @@
 .plan-tutor strong{display:block;font-size:12px;margin-bottom:3px}
 .plan-tutor p{margin:0;font-size:11.5px;line-height:1.75;color:#CFC6EA}
 .plan-note{margin:9px 2px 0;font-size:10px;color:#8C81B8;line-height:1.7}
+
+/* 管理者ビュー：4人の進捗をまとめて見る */
+.adm-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:10px}
+.adm-h{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.adm-h .av{width:34px;height:34px;border-radius:10px;background:var(--surface-2);display:grid;place-items:center;font-size:17px;flex:none}
+.adm-h strong{font-size:15px;font-weight:700}
+.adm-h small{display:block;font-size:11px;color:var(--muted);margin-top:1px}
+.adm-h .rk{margin-left:auto;text-align:right;flex:none}
+.adm-h .rk b{font-family:"Chivo Mono",ui-monospace,monospace;font-size:17px;color:var(--amber)}
+.adm-h .rk span{display:block;font-size:9.5px;color:var(--muted);letter-spacing:.08em}
+.adm-g{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+.adm-g div{background:var(--surface-2);border-radius:9px;padding:7px 8px;text-align:center}
+.adm-g b{display:block;font-family:"Chivo Mono",ui-monospace,monospace;font-size:14px;font-weight:700}
+.adm-g span{font-size:9.5px;color:var(--muted)}
+.adm-cats{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:8px}
+.adm-cats div{border:1px solid var(--line);border-radius:9px;padding:6px 7px}
+.adm-cats i{font-style:normal;display:block;font-size:9.5px;margin-bottom:3px}
+.adm-cats b{font-family:"Chivo Mono",ui-monospace,monospace;font-size:12.5px}
+.adm-cats small{display:block;font-size:9px;color:var(--muted)}
+.adm-bar{height:6px;border-radius:99px;background:var(--ground-2);overflow:hidden;margin-top:9px}
+.adm-bar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--amber),#A57BFF)}
+.adm-note{font-size:10.5px;color:var(--muted);margin-top:7px;line-height:1.7}
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
 body{
@@ -462,6 +484,16 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
   </section>
 
   <!-- ══ コレクション ══ -->
+  <!-- ══ 管理者ビュー ══ -->
+  <section id="sAdmin" class="hidden">
+    <div class="sec">
+      <div class="sec-h"><h2>みんなの進捗</h2><span class="eyebrow" id="admStamp">—</span></div>
+      <div id="admList"></div>
+      <div class="stack"><button class="btn btn-g" id="admReload">🔄 最新を取り直す</button>
+        <button class="btn btn-g" data-go="pick">プレイヤーを切り替える</button></div>
+    </div>
+  </section>
+
   <section id="sColl" class="hidden">
     <div class="sec-h" style="margin-top:18px"><h2>コレクション</h2><span class="eyebrow" id="cRate"></span></div>
     <div class="tabs" id="cTabs"></div>
@@ -1788,6 +1820,10 @@ const PLAYERS=[
   {name:"佐藤",   av:"📎"},
   {name:"川合",   av:"🧩"}
 ];
+/* 家原は問題を解かん。4人の進捗を見るためだけの立場。
+   Supabaseに行も作らんし、成績も持たん */
+const ADMIN = {name:"家原", av:"👀"};
+const isAdmin = ()=> ME === ADMIN.name;
 const ME_KEY="takken-tower-me";
 const KEY_OF = n => "takken-tower-v2:"+n;
 let ME = null;
@@ -1812,7 +1848,7 @@ function load(){
   try{ const r=localStorage.getItem(KEY_OF(ME)); if(r) S=Object.assign(fresh(),JSON.parse(r)); }catch(e){}
 }
 function save(){
-  if(!ME) return;
+  if(!ME || isAdmin()) return;   // 管理者は書き込まん
   try{ localStorage.setItem(KEY_OF(ME),JSON.stringify(S)); }catch(e){}
   queuePush();
 }
@@ -1988,6 +2024,12 @@ function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("on"
 function ensureTk(){ TIER_ORDER.forEach(k=>{ if(typeof S.tk[k]!=="number") S.tk[k]=0; }); }
 function totalTk(){ ensureTk(); return TIER_ORDER.reduce((a,k)=>a+S.tk[k],0); }
 function syncHud(){
+  if(isAdmin()){
+    $("hLv").textContent="—"; $("hCoin").textContent=0; $("hTk").textContent=0;
+    $("hMe").textContent=ADMIN.av+" "+ADMIN.name+"・管理者";
+    $("hXp").style.width="0%";
+    return;
+  }
   ensureTitles();
   $("hLv").textContent=myRank(); $("hCoin").textContent=S.coin; $("hTk").textContent=totalTk();
   const ti=equippedTitle(), ic=POOL.icon.find(i=>i.id===S.eq.icon);
@@ -1995,7 +2037,7 @@ function syncHud(){
   $("hXp").style.width=Math.round(rankProgress(S.totalCorrect)*100)+"%";
 }
 function show(id){
-  ["sHome","sQuiz","sRes","sGacha","sColl","sRank"].forEach(s=>$(s).classList.toggle("hidden",s!==id));
+  ["sHome","sQuiz","sRes","sGacha","sColl","sRank","sAdmin"].forEach(s=>$(s).classList.toggle("hidden",s!==id));
   scrollTo(0,0); syncHud();
 }
 
@@ -2612,6 +2654,69 @@ function renderTitleColl(){
 }
 
 /* ══════════════════════════════════════════════════════
+   管理者ビュー
+   4人ぶんをSupabaseから取ってきて、そのまま並べるだけ。
+   書き込みは一切せん
+   ══════════════════════════════════════════════════════ */
+async function renderAdmin(){
+  show("sAdmin");
+  $("admStamp").textContent="読み込み中…";
+  $("admList").innerHTML='<div class="adm-card" style="text-align:center;color:var(--muted);font-size:12.5px">取りに行きよる…</div>';
+
+  const rows = await pullAll();
+  if(!rows){
+    $("admStamp").textContent="オフライン";
+    $("admList").innerHTML='<div class="adm-card" style="font-size:12.5px;line-height:1.9;color:#4A4160">'
+      +'順位表のデータを取りに行けんかった。ネットにつながっとらんかもしれん。<br>'
+      +'<span style="color:var(--muted);font-size:11.5px">しばらくしてから「最新を取り直す」を押してみて。</span></div>';
+    return;
+  }
+  TEAM=rows;
+  const now=new Date();
+  $("admStamp").textContent=now.toLocaleString("ja-JP",{month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"})+" 時点";
+
+  const total=TOTAL_Q();
+  const order=PLAYERS.map(p=>Object.assign(
+    {name:p.name,av:p.av,total_correct:0,total_answered:0,best_ta:0,play_seconds:0,stats:{},own:{},seen:{},last_played:null},
+    rows.find(r=>r.name===p.name)||{}, {av:p.av}));
+  order.sort((a,b)=>(b.total_correct||0)-(a.total_correct||0));
+
+  $("admList").innerHTML = order.map(r=>{
+    const tc=r.total_correct||0, ta=r.total_answered||0;
+    const rate=ta?Math.round(tc/ta*100):0;
+    const rank=rankOf(tc);
+    const seen=Object.keys(r.seen||{}).length;
+    const clear=total?Math.round(seen/total*100):0;
+    const last=r.last_played
+      ? new Date(r.last_played).toLocaleString("ja-JP",{month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"})
+      : "まだ";
+    const cats=Object.keys(CATS).map(k=>{
+      const st=(r.stats||{})[k]||{c:0,t:0};
+      const cr=st.t?Math.round(st.c/st.t*100):0;
+      return '<div><i style="color:'+CATS[k].c+'">'+CATS[k].name+'</i>'
+        +'<b>'+cr+'%</b><small>'+st.c+' / '+st.t+'</small></div>';
+    }).join("");
+    return '<div class="adm-card">'
+      +'<div class="adm-h"><span class="av">'+r.av+'</span>'
+        +'<div><strong>'+r.name+'</strong><small>'+titleAt(rank).n+'　最終 '+last+'</small></div>'
+        +'<div class="rk"><b>'+rank+'</b><span>RANK</span></div></div>'
+      +'<div class="adm-g">'
+        +'<div><b>'+tc+'</b><span>正解</span></div>'
+        +'<div><b>'+rate+'%</b><span>正答率</span></div>'
+        +'<div><b>'+clear+'%</b><span>制覇率</span></div>'
+        +'<div><b>'+fmtDur(r.play_seconds)+'</b><span>学習時間</span></div>'
+      +'</div>'
+      +'<div class="adm-cats">'+cats+'</div>'
+      +'<div class="adm-bar"><i style="width:'+Math.min(100,Math.round(rankProgress(tc)*100))+'%"></i></div>'
+      +'<div class="adm-note">'+ta+'問 解答　タイムアタック最高 '+(r.best_ta||0)+'問　'
+        +'次の称号まで '+(toNextRank(tc)===null?"最上位":"あと"+toNextRank(tc)+"問")+'</div>'
+    +'</div>';
+  }).join("");
+
+  $("admReload").onclick=renderAdmin;
+}
+
+/* ══════════════════════════════════════════════════════
    使用時間の計測
    画面を見ている間だけ数える。3分さわらんかったら止める（開きっぱなしを弾く）
    ══════════════════════════════════════════════════════ */
@@ -2679,12 +2784,19 @@ function renderPick(first){
        +'成績はこの4人で共有されて、順位表に出るっちゃ。あとからHUDの名前をタップすれば切り替えられる。</p>'
      +'<div class="pick">'+PLAYERS.map(p=>
         '<button data-me="'+p.name+'"><span class="av">'+p.av+'</span>'+p.name+'</button>').join("")+'</div>'
+     +'<div style="margin-top:14px;padding-top:13px;border-top:1px dashed var(--line)">'
+       +'<div class="eyebrow" style="margin-bottom:7px">管理者</div>'
+       +'<div class="pick"><button data-me="'+ADMIN.name+'"><span class="av">'+ADMIN.av+'</span>'+ADMIN.name+'</button></div>'
+       +'<p style="font-size:11px;color:var(--muted);margin:9px 0 0;line-height:1.7">'
+         +'問題は解かず、4人の進捗を見るだけの画面になるっちゃ。</p>'
+     +'</div>'
     +'</div>'
     +(first?'':'<div class="stack"><button class="btn btn-g" data-go="home">やめる</button></div>');
   show("sRes");
   $("sRes").querySelectorAll("[data-me]").forEach(b=>b.addEventListener("click",()=>{
     ME=b.dataset.me;
     try{ localStorage.setItem(ME_KEY,ME); }catch(e){}
+    if(isAdmin()){ S=fresh(); syncHud(); renderAdmin(); return; }
     load(); ensureDaily(); ensureDay(); renderHome(); pullMe().then(drawWeek);
   }));
 }
@@ -2842,7 +2954,9 @@ document.addEventListener("click",e=>{
   else if(g==="coll") renderColl();
   else if(g==="pq") choosePq();
   else if(g==="rank") renderRank();
-  else if(g==="home"){ clearInterval(timerId); renderHome(); }
+  else if(g==="home"){ clearInterval(timerId); isAdmin()?renderAdmin():renderHome(); }
+  else if(g==="pick") renderPick(false);
+  else if(g==="admin") renderAdmin();
 });
 $("hMe").addEventListener("click",()=>{ clearInterval(timerId); renderPick(false); });
 $("qQuit").addEventListener("click",()=>{
@@ -2853,8 +2967,9 @@ $("qQuit").addEventListener("click",()=>{
 
 function boot(){
   try{ ME=localStorage.getItem(ME_KEY); }catch(e){}
-  if(!PLAYERS.some(p=>p.name===ME)) ME=null;
+  if(!PLAYERS.some(p=>p.name===ME) && ME!==ADMIN.name) ME=null;
   if(!ME){ startClock(); renderPick(true); return; }
+  if(isAdmin()){ S=fresh(); syncHud(); startClock(); renderAdmin(); return; }
   load(); ensureDaily(); ensureDay(); renderHome(); startClock();
   pullMe().then(drawWeek);
 }
