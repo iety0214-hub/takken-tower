@@ -395,29 +395,10 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
         <button class="plan-more" id="planMore">くわしく ▾</button>
         <div id="planDetail" class="hidden">
           <div id="planCd"></div>
-        <div class="plan-tiles">
-          <button class="plan-tile" id="planTileAvg"><small>科目バランス</small><b id="planAvg">平均スコア --</b></button>
-          <button class="plan-tile" id="planTileWeak"><small>重点科目</small><b id="planWeak">弱点を確認</b></button>
-        </div>
         <button class="plan-step review hidden" id="planS0">
-          <div class="plan-step-b"><strong>間違えた問題の復習</strong><span id="planS0s"></span></div>
-          <div class="plan-step-n">まず</div>
+          <div class="plan-step-b"><strong>復習だけやる</strong><span id="planS0s"></span></div>
+          <div class="plan-step-n">復習</div>
         </button>
-        <button class="plan-step" id="planS1">
-          <div class="plan-step-b"><strong>弱点科目のステージ</strong><span id="planS1s">10問</span></div>
-          <div class="plan-step-n">STEP 1</div>
-          <div class="plan-bar"><i id="planS1b" style="width:0%"></i></div>
-        </button>
-        <button class="plan-step" id="planS2">
-          <div class="plan-step-b"><strong>直近10年の重要過去問</strong><span id="planS2s">5問</span></div>
-          <div class="plan-step-n">STEP 2</div>
-          <div class="plan-bar"><i id="planS2b" style="width:0%"></i></div>
-        </button>
-        <div class="plan-tutor">
-          <div class="ico">🧠</div>
-          <div><strong>きょうの一言</strong><p id="planTip"></p></div>
-        </div>
-        <p class="plan-note" id="planNote"></p>
         </div>
       </div>
     </div>
@@ -450,18 +431,7 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
       <div class="sec-h" style="margin-top:6px"><h2>記録</h2><span class="eyebrow" id="logStreak"></span></div>
     </div>
     <div class="sec">
-      <div class="sec-h"><h2>学習時間</h2><span class="eyebrow">画面を見とる間だけ計測</span></div>
-      <div class="bigbox"><div class="bigbox-l">きょうの学習時間</div><div class="bigbox-v" id="todaySec">0時間0分</div></div>
-      <div class="card" style="margin-top:10px">
-        <div class="legend">
-          <span><i style="background:var(--amber)"></i>じぶん</span>
-          <span><i style="background:var(--mint)"></i>みんなの平均</span>
-        </div>
-        <div class="chartwrap"><svg id="weekChart" viewBox="0 0 340 176" role="img" aria-label="曜日ごとの学習時間"></svg></div>
-      </div>
-    </div>
-    <div class="sec">
-      <div class="sec-h"><h2>制覇状況（全期間）</h2><span class="eyebrow">通算 <b id="totalSec" class="num">0時間0分</b></span></div>
+      <div class="sec-h"><h2>制覇状況</h2><span class="eyebrow" id="logStreak2"></span></div>
       <div class="card" style="display:flex;gap:16px;align-items:center">
         <svg id="donut" viewBox="0 0 120 120" style="width:132px;flex:none;height:auto" role="img" aria-label="制覇率"></svg>
         <div style="flex:1;min-width:0">
@@ -477,19 +447,9 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
       <div class="sec-h"><h2>科目別の仕上がり</h2><span class="eyebrow">正答率</span></div>
       <div class="cats" id="catStats"></div>
     </div>
-    <div class="sec">
-      <div class="sec-h"><h2>ガチャ券の貯まり方</h2></div>
-      <div class="card" style="font-size:12.5px;color:#4A4160;line-height:1.9">
-        <div id="tkRule"></div>
-        <div style="margin-top:11px;padding-top:11px;border-top:1px dashed var(--line);color:var(--muted);font-size:11.5px">
-          通算正解30問ごとに1枚もらえる。ランクは上の表で抽選される。<br>
-          タイムアタックは<b>自己ベストを更新したときだけ</b>1枚（5問以上解いた場合）。<br>
-          <b style="color:var(--rare)">レジェンド券</b>（S・RARE 75% / ULTRA 25%）は2つの方法でしか手に入らん —
-          鬼レベル模試で45問中38問以上、または毎週月曜11時の時点でタイムアタック1位。
-        </div>
-      </div>
-    </div>
     <p class="foot">
+      ガチャ券は通算正解30問ごとに1枚。ランクが上がるほど良い券が出やすい。
+      レジェンド券は鬼レベル模試38問以上か、毎週月曜11時の時点でタイムアタック1位のときだけ。<br>
       収録：権利関係・法令上の制限・税その他（税金）・宅建業法の4科目。<br>
       ステージとタイムアタックは全1,014問から出る（オリジナル演習256＋本試験17回分758）。<br>
       鬼レベル模試の90問は、本試験の過去問と半分以上かぶるけん模試モードだけで出す。<br>
@@ -2052,6 +2012,7 @@ function renderLog(){
   show("sLog");
   const n=streakNow();
   $("logStreak").textContent = n ? "🔥 "+n+"日連続" : "きょう解いたら連続1日目";
+  $("logStreak2").textContent = seenCount(S.seen)+" / "+TOTAL_Q()+" 問";
 }
 
 const TK_NEED = 30;
@@ -2457,39 +2418,17 @@ function renderPlan(){
     $("planMore").textContent = open ? "くわしく ▾" : "とじる ▴";
   };
 
-  const ks=Object.keys(CATS);
-  $("planAvg").textContent = "平均スコア "+Math.round(ks.reduce((a,k)=>a+catRate(k),0)/ks.length*100)+"%";
-  const w=weakCat();
-  $("planWeak").textContent = CATS[w].name+" "+Math.round(catRate(w)*100)+"%";
-
-  const d1=Math.min(PLAN_G1,S.plan.s1), d2=Math.min(PLAN_G2,S.plan.s2);
-  $("planS1s").textContent = CATS[w].name+"・"+PLAN_G1+"問　きょう "+d1+" / "+PLAN_G1;
-  $("planS2s").textContent = "平成30〜令和7年から"+PLAN_G2+"問　きょう "+d2+" / "+PLAN_G2;
-  $("planS1b").style.width = (d1/PLAN_G1*100)+"%";
-  $("planS2b").style.width = (d2/PLAN_G2*100)+"%";
   const mc=missList().length;
   $("planS0").classList.toggle("hidden", mc===0);
   $("planS0s").textContent = mc+"問たまっとる　"+Math.min(REVIEW_N,mc)+"問ずつ解き直す";
-  $("planS1").classList.toggle("done", d1>=PLAN_G1);
-  $("planS2").classList.toggle("done", d2>=PLAN_G2);
   $("planLead").textContent = todayQ()>=TODAY_N ? "きょうもよう頑張った" : "押すだけでよか";
-  $("planTip").textContent = planTip(w,p,d1,d2);
-  $("planNote").textContent = "合格予測は通算正答率("+(S.answered?Math.round(S.totalCorrect/S.answered*100):0)
-    +"%)を、解いた範囲の広さで割り引いた目安。本試験の合否を保証するものではないっちゃ。";
-
   $("planS0").onclick = startReview;
-  $("planS1").onclick = ()=>startStage(w);
-  $("planS2").onclick = startDrill;
-  $("planTileAvg").onclick = chooseCat;
-  $("planTileWeak").onclick = ()=>startStage(w);
 }
 
 function renderHome(){
   ensureDaily(); ensureDay(); show("sHome"); drawCity();
   renderPlan();
-  $("todaySec").textContent=fmtHM(S.day.s);
-  $("totalSec").textContent=fmtHM(S.playSec);
-  drawWeek(); drawDonut();
+  drawDonut();
   const lit = POOL.theme.filter(t=>S.own.theme.includes(t.id)).length
             + POOL.icon.filter(t=>S.own.icon.includes(t.id)).length;
   $("cityStat").textContent="解放 "+lit+" / 通算正解 "+S.totalCorrect;
@@ -2501,17 +2440,7 @@ function renderHome(){
     ? "今週はもう受けとる。次は"+toNextWeek()+"後（月曜11時）"
     : "45問通し・週1回だけ。"+PQ_PASS+"問以上でレジェンド券";
 
-  const mix=mixFor(myRank());
   $("tkHint").textContent="あと"+(TK_NEED-S.sinceTk)+"問で券が1枚";
-  $("tkRule").innerHTML = TK_MIX.map((m,i)=>{
-    const on = m===mix;
-    const from = i===0 ? 1 : TK_MIX[i-1].maxRank+1;
-    const range = m.maxRank>=999 ? "ランク"+from+"〜" : "ランク"+from+"〜"+m.maxRank;
-    const od = TIER_ORDER.filter(k=>m.odds[k]).map(k=>TIERS[k].n+' '+m.odds[k]+'%').join('　');
-    return '<div style="display:flex;gap:9px;align-items:center;'+(on?'color:var(--amber);font-weight:700':'')+'">'
-      +'<span class="num" style="width:76px;flex:none">'+range+'</span>'
-      +'<span>'+od+(on?' ← いまここ':'')+'</span></div>';
-  }).join("");
 
   const ms=missions();
   $("misDate").textContent=today();
@@ -3164,7 +3093,7 @@ async function renderAdmin(){
         +'<div><b>'+tc+'</b><span>正解</span></div>'
         +'<div><b>'+rate+'%</b><span>正答率</span></div>'
         +'<div><b>'+clear+'%</b><span>制覇率</span></div>'
-        +'<div><b>'+fmtDur(r.play_seconds)+'</b><span>学習時間</span></div>'
+        +'<div><b>'+(rowStreak(r)?'🔥'+rowStreak(r):'—')+'</b><span>連続日数</span></div>'
       +'</div>'
       +'<div class="adm-cats">'+cats+'</div>'
       +'<div class="adm-bar"><i style="width:'+Math.min(100,Math.round(rankProgress(tc)*100))+'%"></i></div>'
@@ -3232,14 +3161,13 @@ function startClock(){
     if(!ME) return;
     if(document.hidden) return;
     if(Date.now()-lastAct>IDLE_MS) return;
-    ensureDay();
-    S.playSec++; S.day.s++; S.week[S.day.d]=S.day.s;
+    /* 学習時間の計測はやめた（画面を開いとるだけで増えるけん指標にならん）。
+       30秒ごとの自動保存だけ続ける。play_seconds 列は据え置き */
     tickN++;
     if(tickN%30===0){                 // 30秒ごとに保存。毎秒書くと重いため
       try{ localStorage.setItem(KEY_OF(ME),JSON.stringify(S)); }catch(e){}
       queuePush();
     }
-    const el=$("todaySec"); if(el) el.textContent=fmtHM(S.day.s);
   },1000);
 }
 addEventListener("pagehide",()=>{ if(ME){ try{ localStorage.setItem(KEY_OF(ME),JSON.stringify(S)); }catch(e){} } });
@@ -3277,17 +3205,18 @@ function renderPick(first){
    順位表
    ══════════════════════════════════════════════════════ */
 /* 順位の指標。byCat が true のものだけ科目でしぼれる */
+/* 他人の行の連続日数。own.meta.streak をそのまま読む（きょうか昨日に解いとらんなら0） */
+function rowStreak(r){
+  const st=(((r||{}).own||{}).meta||{}).streak;
+  if(!st || typeof st!=="object") return 0;
+  return (st.d===today() || st.d===yesterdayKey()) ? (st.n||0) : 0;
+}
 const RK_KEYS=[
-  {k:"play_seconds", n:"学習時間",   u:"",   fmt:v=>fmtHM(v)},
-  {k:"total_correct",n:"正解数",     u:"問", byCat:true},
-  {k:"total_answered",n:"解答数",    u:"問", byCat:true},
-  {k:"rate",         n:"正答率",     u:"%",  byCat:true},
-  {k:"clear",        n:"制覇率",     u:"%"},
-  {k:"rank",         n:"称号ランク", u:"ランク"},
-  {k:"best_ta",      n:"タイムアタック", u:"問"},
-  {k:"medal",        n:"メダル獲得数", u:"個"}
+  {k:"total_correct",n:"正解数",  u:"問", byCat:true},
+  {k:"rate",         n:"正答率",  u:"%",  byCat:true},
+  {k:"streak",       n:"🔥連続",  u:"日"}
 ];
-let rkKey="play_seconds", rkCat="all";
+let rkKey="total_correct", rkCat="all";
 
 function rkValue(r,key,cat){
   const st=r.stats||{};
@@ -3296,7 +3225,7 @@ function rkValue(r,key,cat){
     return Object.keys(CATS).reduce((a,k)=>a+(((st[k]||{})[f])||0),0);
   };
   switch(key){
-    case "play_seconds": return r.play_seconds||0;
+    case "streak":       return rowStreak(r);
     case "rank":         return rankOf(r.total_correct||sum("c"));
     case "best_ta":      return r.best_ta||0;
     case "medal": {
@@ -3355,7 +3284,6 @@ async function renderRank(){
   rows=rows.map(r=>r.name===ME?Object.assign({},r,{
     total_correct:Math.max(r.total_correct||0,mine.total_correct),
     total_answered:Math.max(r.total_answered||0,mine.total_answered), best_ta:Math.max(r.best_ta||0,mine.best_ta),
-    play_seconds:Math.max(r.play_seconds||0,mine.play_seconds),
     stats:mine.stats, own:mine.own, seen:mine.seen
   }):r);
   TEAM=rows;
@@ -3374,7 +3302,7 @@ async function renderRank(){
       +'<div class="rk-n">'+(i+1)+'</div>'
       +'<div class="rk-ic">'+p.av+'</div>'
       +'<div class="rk-b"><strong>'+r.name+(r.name===ME?' <span style="font-size:10px;color:var(--amber)">じぶん</span>':'')+'</strong>'
-        +'<span>'+titleAt(rkValue(r,"rank","all")).n+'　'+rkValue(r,"total_correct","all")+'/'+rkValue(r,"total_answered","all")+'問　正答率'+rate+'%　'+fmtDur(r.play_seconds)+'</span></div>'
+        +'<span>'+titleAt(rkValue(r,"rank","all")).n+'　'+rkValue(r,"total_correct","all")+'/'+rkValue(r,"total_answered","all")+'問　正答率'+rate+'%　'+(rowStreak(r)?'🔥'+rowStreak(r)+'日':'')+'</span></div>'
       +'<div class="rk-v"><b style="font-size:'+(def.fmt?"14px":"19px")+'">'+fmt(val(r))+'</b><span>'+def.u+'</span></div>'
       +'<div class="rk-bar" style="width:'+(val(r)/top*100)+'%"></div>'
     +'</div>';
