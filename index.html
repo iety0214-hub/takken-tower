@@ -2744,11 +2744,18 @@ function ensureDay(){
   Object.keys(S.week).forEach(k=>{ if(keep.indexOf(k)<0) delete S.week[k]; });
 }
 /* 問題の識別子。配列の順番が変わっても変わらないように本文から作る */
+/* 問題の識別子。配列の順番が変わっても変わらんように中身から作る。
+   本文の先頭だけやと「宅地建物取引業の免許…に関する次の記述のうち」みたいな
+   書き出しが同じ問が全部くっついてしまうけん、出典・本文全体・選択肢まで混ぜる */
 function qid(q){
-  const s=q.cat+"|"+q.q.slice(0,40);
-  let h=5381;
-  for(let i=0;i<s.length;i++) h=((h*33)^s.charCodeAt(i))>>>0;
-  return h.toString(36);
+  const s = q.cat+"|"+(q.y||"")+"#"+(q.n||"")+"|"+(q.src||"")+"|"+q.q+"|"+(q.c||[]).join("|");
+  let h1=5381, h2=52711;
+  for(let i=0;i<s.length;i++){
+    const c=s.charCodeAt(i);
+    h1=((h1*33)^c)>>>0;
+    h2=((h2*31)+c)>>>0;
+  }
+  return h1.toString(36)+h2.toString(36);
 }
 const TOTAL_Q = ()=> QPOOL.length;
 ["pointerdown","keydown","wheel","touchstart"].forEach(ev=>
