@@ -41,6 +41,8 @@
 .plan-pct .v{font-family:Chivo Mono,ui-monospace,monospace;font-size:23px;font-weight:700;line-height:1}
 .plan-pct .s{font-size:9.5px;color:rgba(255,255,255,.80);margin-top:3px}
 .plan-bar{height:7px;border-radius:99px;background:rgba(255,255,255,.10);overflow:hidden;margin-top:11px}
+.plan-cd{display:flex;flex-direction:column;gap:3px;margin-top:11px;padding-top:10px;border-top:1px dashed rgba(255,255,255,.12);font-size:11.5px;line-height:1.6;color:#CFC6EA}
+.plan-cd b{color:#FFFFFF;font-weight:700}
 .plan-bar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#8E6BFF,#B9A3FF);transition:width .4s ease}
 .plan-tiles{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:9px}
 .plan-tile{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:10px 11px;text-align:left;color:inherit;font:inherit;cursor:pointer}
@@ -366,6 +368,7 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
             <div class="plan-pct"><div class="v" id="planPct">--</div><div class="s" id="planGap">目安</div></div>
           </div>
           <div class="plan-bar"><i id="planBar" style="width:0%"></i></div>
+          <div id="planCd"></div>
         </div>
         <div class="plan-tiles">
           <button class="plan-tile" id="planTileAvg"><small>科目バランス</small><b id="planAvg">平均スコア --</b></button>
@@ -456,8 +459,8 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
 
     <p class="foot">
       収録：権利関係・法令上の制限・税その他（税金）・宅建業法の4科目。<br>
-      ステージとタイムアタックは全1,135問から出る（オリジナル演習287＋本試験17回分758＋鬼レベル模試90）。<br>
-      鬼レベル模試の90問は45問通しでも解けるので、そちらとは問題が被る。<br>
+      ステージとタイムアタックは全1,045問から出る（オリジナル演習287＋本試験17回分758）。<br>
+      鬼レベル模試の90問は、本試験の過去問と半分以上かぶるけん模試モードだけで出す。<br>
       いずれも令和8年4月1日施行の法令に合わせた改訂版。収録している1,135問すべてに、肢ごとの解説が付いている。<br>
       5点免除科目（住宅金融支援機構法／景品表示法／統計／土地／建物＝本試験 問46〜50）は収録していません。<br>
       解説は2026年8月時点の現行法にもとづく。進捗はこの端末のブラウザにのみ保存されます。
@@ -1901,7 +1904,7 @@ function missMap(){
 /* 復習待ちの問。間違えた回数が多い順、同じなら古い順 */
 function missList(){
   const m = missMap();
-  return QPOOL.filter(q=>m[qid(q)])
+  return ALLQ.filter(q=>m[qid(q)])
     .sort((a,b)=>((m[qid(b)].w||0)-(m[qid(a)].w||0)) || ((m[qid(a)].t||0)-(m[qid(b)].t||0)));
 }
 function noteMiss(q){
@@ -1919,6 +1922,30 @@ function startReview(){
   if(!list.length){ toast("復習する問はいまは無いっちゃ"); return; }
   G={mode:"stage",cat:null,review:true,list,i:0,answered:0,correct:0,combo:0,maxCombo:0,lives:999,coin:0};
   show("sQuiz"); renderQ();
+}
+
+/* ══════════════════════════════════════════════════════
+   本試験までのカウントダウン
+   令和8年度は 2026-10-18（日）。日付は端末の時計で数える
+   ══════════════════════════════════════════════════════ */
+const EXAM_DATE = "2026-10-18";
+function daysToExam(){
+  const [y,m,d]=EXAM_DATE.split("-").map(Number);
+  const ex=new Date(y,m-1,d), now=new Date();
+  const t0=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  return Math.round((ex-t0)/86400000);
+}
+/* 未着手の問を残り日数で割る。試験前日までに1周する前提 */
+function paceHtml(){
+  const days=daysToExam();
+  if(days<0) return "";
+  const left=Math.max(0, TOTAL_Q()-seenCount(S.seen));
+  const per=days>0 ? Math.ceil(left/days) : left;
+  const when = days===0 ? "きょうが本試験" : "本試験 10/18（日）まで <b>あと"+days+"日</b>";
+  const pace = left===0 ? "全問1周済み。あとは復習と模試で仕上げるだけ"
+             : days===0 ? "未着手 "+left+"問"
+             : "未着手 "+left.toLocaleString()+"問　→　<b>1日 "+per+"問</b>で試験までに1周";
+  return '<div class="plan-cd"><span>📅 '+when+'</span><span>'+pace+'</span></div>';
 }
 
 const TK_NEED = 30;
@@ -2225,7 +2252,7 @@ function drawWeek(){
 function drawDonut(){
   const svg=$("donut"); if(!svg) return;
   const total=TOTAL_Q();
-  const done=Object.keys(S.seen||{}).length;
+  const done=seenCount(S.seen);
   const pct=total?Math.round(done/total*100):0;
   const r=44, c=2*Math.PI*r;
   const on=c*Math.min(1,done/(total||1));
@@ -2271,7 +2298,7 @@ function weakCat(){
 function predictPct(){
   if(S.answered<20) return null;
   const rate=S.totalCorrect/S.answered;
-  const cover=Math.min(1, Object.keys(S.seen||{}).length/(TOTAL_Q()*0.6));
+  const cover=Math.min(1, seenCount(S.seen)/(TOTAL_Q()*0.6));
   return Math.max(1, Math.min(99, Math.round(rate*100*(0.65+0.35*cover))));
 }
 /* STEP2：直近10年から5問。まだ正解しとらん問を優先する */
@@ -2302,6 +2329,7 @@ function renderPlan(){
   $("planGap").textContent = p===null ? "あと"+(20-S.answered)+"問で算出"
     : p>=PASS_LINE ? "合格ライン到達" : "合格まで "+(PASS_LINE-p)+"%";
   $("planBar").style.width = (p===null ? 0 : Math.min(100, p/PASS_LINE*100))+"%";
+  $("planCd").innerHTML = paceHtml();
 
   const ks=Object.keys(CATS);
   $("planAvg").textContent = "平均スコア "+Math.round(ks.reduce((a,k)=>a+catRate(k),0)/ks.length*100)+"%";
@@ -2382,7 +2410,19 @@ function renderHome(){
 let G=null, timerId=null;
 /* ステージ・タイムアタックの出題プール。鬼レベル模試（PQ）も混ぜる。
    鬼レベルは45問通しでも出るので、そちらと問題が被るのは承知のうえ */
-const QPOOL = Q.concat(typeof PQ!=="undefined"?PQ:[]);
+/* ステージ・タイムアタック・ドリルの出題プール。
+   鬼レベル模試の90問は入れん。本試験の過去問と56問かぶっとって、
+   同じ問題に別の解説が付いて出てくるけん。鬼レベルは模試モードだけで出す */
+const QPOOL = Q;
+/* 復習リストや間違い記録は鬼レベルの問も対象（間違いは間違いやけん） */
+const ALLQ  = Q.concat(typeof PQ!=="undefined"?PQ:[]);
+/* seen に鬼レベルの id が残っとっても制覇率の分子に入れんように、プール内の id だけ数える */
+let _qidSet = null;
+function seenCount(seen){
+  if(!_qidSet) _qidSet = new Set(QPOOL.map(qid));
+  let n=0; for(const k in (seen||{})) if(_qidSet.has(k)) n++;
+  return n;
+}
 const shuffle=a=>{const b=a.slice();for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];}return b;};
 
 function startStage(cat){
@@ -2846,7 +2886,7 @@ async function renderAdmin(){
     const tc=r.total_correct||0, ta=r.total_answered||0;
     const rate=ta?Math.round(tc/ta*100):0;
     const rank=rankOf(tc);
-    const seen=Object.keys(r.seen||{}).length;
+    const seen=seenCount(r.seen);
     const clear=total?Math.round(seen/total*100):0;
     const last=r.last_played
       ? new Date(r.last_played).toLocaleString("ja-JP",{month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"})
@@ -3006,7 +3046,7 @@ function rkValue(r,key,cat){
       const gachaTitles=((ow.title)||[]).filter(id=>POOL.title.some(t=>t.id===id)).length;
       return ((ow.theme)||[]).length + ((ow.icon)||[]).length + gachaTitles;
     }
-    case "clear":        return Math.round(Object.keys(r.seen||{}).length / Math.max(1,TOTAL_Q()) * 100);
+    case "clear":        return Math.round(seenCount(r.seen) / Math.max(1,TOTAL_Q()) * 100);
     case "total_correct":  return cat==="all" ? (r.total_correct||sum("c")) : sum("c");
     case "total_answered": return cat==="all" ? (r.total_answered||sum("t")) : sum("t");
     case "rate": {
