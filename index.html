@@ -53,6 +53,8 @@
 .plan-step-n{flex:none;font-family:Chivo Mono,ui-monospace,monospace;font-size:10px;font-weight:700;color:#CBBBFF;background:rgba(142,107,255,.22);border-radius:8px;padding:5px 9px}
 .plan-step .plan-bar{width:100%;margin-top:9px}
 .plan-step.done .plan-step-n{color:#0E2A22;background:#37D399}
+.plan-step.review{border-color:rgba(242,73,107,.45);background:rgba(242,73,107,.14)}
+.plan-step.review .plan-step-n{color:#FFD5DD;background:rgba(242,73,107,.45)}
 .plan-tutor{display:flex;gap:11px;margin-top:11px;background:rgba(142,107,255,.13);border:1px solid rgba(142,107,255,.24);border-radius:14px;padding:12px}
 .plan-tutor .ico{width:30px;height:30px;border-radius:50%;background:rgba(142,107,255,.35);display:grid;place-items:center;font-size:15px;flex:none}
 .plan-tutor strong{display:block;font-size:12px;margin-bottom:3px}
@@ -369,6 +371,10 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
           <button class="plan-tile" id="planTileAvg"><small>科目バランス</small><b id="planAvg">平均スコア --</b></button>
           <button class="plan-tile" id="planTileWeak"><small>重点科目</small><b id="planWeak">弱点を確認</b></button>
         </div>
+        <button class="plan-step review hidden" id="planS0">
+          <div class="plan-step-b"><strong>間違えた問題の復習</strong><span id="planS0s"></span></div>
+          <div class="plan-step-n">まず</div>
+        </button>
         <button class="plan-step" id="planS1">
           <div class="plan-step-b"><strong>弱点科目のステージ</strong><span id="planS1s">10問</span></div>
           <div class="plan-step-n">STEP 1</div>
@@ -1879,6 +1885,42 @@ function meta(){
   return S.own.meta;
 }
 
+/* ══════════════════════════════════════════════════════
+   間違えた問題
+   own.miss に { qid: {w:間違えた回数, ok:その後の連続正解, t:最後に間違えた時刻} }
+   own は jsonb でそのまま Supabase に同期されるけん、列は増やさん。
+   （theme/title/icon 以外のキーはコレクションからは読まれん）
+   ══════════════════════════════════════════════════════ */
+const REVIEW_OK = 2;      // 連続でこれだけ正解したらリストから消える
+const REVIEW_N  = 10;     // 1回の復習で出す問数
+function missMap(){
+  S.own = S.own || {};
+  if(!S.own.miss || typeof S.own.miss!=="object") S.own.miss = {};
+  return S.own.miss;
+}
+/* 復習待ちの問。間違えた回数が多い順、同じなら古い順 */
+function missList(){
+  const m = missMap();
+  return QPOOL.filter(q=>m[qid(q)])
+    .sort((a,b)=>((m[qid(b)].w||0)-(m[qid(a)].w||0)) || ((m[qid(a)].t||0)-(m[qid(b)].t||0)));
+}
+function noteMiss(q){
+  const m=missMap(), id=qid(q);
+  m[id] = {w:((m[id]&&m[id].w)||0)+1, ok:0, t:Date.now()};
+}
+function noteHit(q){
+  const m=missMap(), id=qid(q);
+  if(!m[id]) return;
+  m[id].ok = (m[id].ok||0)+1;
+  if(m[id].ok>=REVIEW_OK) delete m[id];
+}
+function startReview(){
+  const list = missList().slice(0, REVIEW_N);
+  if(!list.length){ toast("復習する問はいまは無いっちゃ"); return; }
+  G={mode:"stage",cat:null,review:true,list,i:0,answered:0,correct:0,combo:0,maxCombo:0,lives:999,coin:0};
+  show("sQuiz"); renderQ();
+}
+
 const TK_NEED = 30;
 const TK_MIX = [
   {maxRank:3,  odds:{bronze:100}},
@@ -2243,6 +2285,8 @@ function startDrill(){
 }
 function planTip(w,p,d1,d2){
   if(S.answered<20) return "まずは20問。そこまで解いたら合格予測が出るっちゃ。";
+  const mc=missList().length;
+  if(mc>=5) return "間違えた問が"+mc+"問たまっとる。新しい問に行く前にこれを潰すほうが伸びるっちゃ。"+REVIEW_OK+"回続けて正解したら消える。";
   if(d1>=PLAN_G1 && d2>=PLAN_G2)
     return "きょうのプランは達成。あとはタイムアタックで速さを上げるか、鬼レベル模試で45問通しに慣れるとよか。";
   const st=S.stats[w];
@@ -2269,6 +2313,9 @@ function renderPlan(){
   $("planS2s").textContent = "平成30〜令和7年から"+PLAN_G2+"問　きょう "+d2+" / "+PLAN_G2;
   $("planS1b").style.width = (d1/PLAN_G1*100)+"%";
   $("planS2b").style.width = (d2/PLAN_G2*100)+"%";
+  const mc=missList().length;
+  $("planS0").classList.toggle("hidden", mc===0);
+  $("planS0s").textContent = mc+"問たまっとる　"+Math.min(REVIEW_N,mc)+"問ずつ解き直す";
   $("planS1").classList.toggle("done", d1>=PLAN_G1);
   $("planS2").classList.toggle("done", d2>=PLAN_G2);
   $("planLead").textContent = (d1>=PLAN_G1 && d2>=PLAN_G2) ? "きょうのぶんは終わり" : "次の一歩が決まっとる";
@@ -2276,6 +2323,7 @@ function renderPlan(){
   $("planNote").textContent = "合格予測は通算正答率("+(S.answered?Math.round(S.totalCorrect/S.answered*100):0)
     +"%)を、解いた範囲の広さで割り引いた目安。本試験の合否を保証するものではないっちゃ。";
 
+  $("planS0").onclick = startReview;
   $("planS1").onclick = ()=>startStage(w);
   $("planS2").onclick = startDrill;
   $("planTileAvg").onclick = chooseCat;
@@ -2428,7 +2476,7 @@ function renderQ(){
   G.ans = G.map.indexOf(q.a);
   $("qTag").textContent=CATS[q.cat].name;
   $("qTag").style.setProperty("--c",CATS[q.cat].c);
-  $("qNo").textContent = G.mode==="stage" ? "Q"+(G.i+1)+" / "+G.list.length
+  $("qNo").textContent = G.mode==="stage" ? (G.review?"復習 ":"Q")+(G.i+1)+" / "+G.list.length
     : G.mode==="pq" ? q.y+"　問"+q.n+"　（"+(G.i+1)+" / "+G.list.length+"）"
     : "Q"+(G.i+1);
   $("qText").textContent=q.q;
@@ -2484,7 +2532,7 @@ function answer(pick){
   });
   S.stats[q.cat].t++; S.answered++;
   ensurePlan();
-  if(G.mode==="stage"){ if(G.drill) S.plan.s2++; else S.plan.s1++; }
+  if(G.mode==="stage"){ if(G.drill) S.plan.s2++; else if(!G.review) S.plan.s1++; }
   G.byCat=G.byCat||{};
   G.byCat[q.cat]=G.byCat[q.cat]||{c:0,t:0};
   G.byCat[q.cat].t++; if(ok) G.byCat[q.cat].c++;
@@ -2499,6 +2547,7 @@ function answer(pick){
     // 正解した瞬間にランクを見る。結果画面まで待つと増え終わっとって比べられん
     if(myRank()>rkBefore){ ensureTitles(); G.rankUp=myRank(); }
     S.seen=S.seen||{}; S.seen[qid(q)]=1;      // クリア済みとして記録
+    noteHit(q);                                // 復習リストに居ったら1歩前進
     bumpMission("correct",q.cat,1);
     bumpMission("combo",null,G.combo);
     if(G.mode==="ta") bumpMission("ta",null,1);
@@ -2506,6 +2555,7 @@ function answer(pick){
     grantTicketIfDue();
   }else{
     G.combo=0; showCombo(0);
+    noteMiss(q);                               // 復習リストへ
     if(G.mode==="stage") G.lives--;
   }
   paintStatus();
@@ -2545,7 +2595,7 @@ function finish(){
   clearInterval(timerId);
   const asked = Math.max(1, G.answered);
   const rate = Math.round(G.correct/asked*100);
-  const cleared = G.mode==="stage" && G.lives>0 && G.i>=G.list.length-1;
+  const cleared = G.mode==="stage" && !G.review && G.lives>0 && G.i>=G.list.length-1;
   const pqDone  = G.mode==="pq" && G.i>=G.list.length-1;
   let bonusCoin = cleared?80:(pqDone?300:0);
   if(cleared) bumpMission("clear",null,1);
@@ -2571,7 +2621,7 @@ function finish(){
   const t=theme();
   $("sRes").innerHTML =
     '<div class="res card" style="border-color:'+(cleared||pqPass||G.mode==="ta"?"var(--amber)":"var(--line)")+'">'
-    +'<div class="eyebrow">'+(G.mode==="ta"?"TIME ATTACK":G.mode==="pq"?G.year:(cleared?"STAGE CLEAR":"GAME OVER"))+'</div>'
+    +'<div class="eyebrow">'+(G.mode==="ta"?"TIME ATTACK":G.mode==="pq"?G.year:G.review?"REVIEW":(cleared?"STAGE CLEAR":"GAME OVER"))+'</div>'
     +'<div class="big">'+G.correct+'<small> / '+asked+'</small></div>'
     +'<div style="color:var(--muted);font-size:12px;margin-top:6px" class="num">正答率 '+rate+'%</div>'
     +'<div class="res-grid">'
@@ -2579,6 +2629,9 @@ function finish(){
       +'<div><b>'+G.correct+'</b><span>正解</span></div>'
       +'<div><b style="color:'+(G.maxCombo>=3?"var(--good)":"inherit")+'">'+G.maxCombo+'</b><span>最大コンボ</span></div>'
     +'</div>'
+    +(G.review?'<div class="ticket-won" style="border-color:var(--line);background:var(--ground-2)">'
+        +'<div class="dsp" style="font-size:17px">復習リスト　残り '+missList().length+'問</div>'
+        +'<div style="font-size:11.5px;color:var(--muted);margin-top:4px">'+REVIEW_OK+'回続けて正解した問は消える。間違えたらまた最初から</div></div>':'')
     +(G.mode==="pq"?'<div class="ticket-won" style="border-color:'+(pqPass?"var(--good)":"var(--line)")
         +';background:'+(pqPass?"rgba(55,211,153,.08)":"var(--ground-2)")+'">'
         +'<div class="dsp" style="font-size:17px;color:'+(pqPass?"var(--good)":"var(--ink)")+'">'
@@ -2607,10 +2660,10 @@ function finish(){
       +'<button class="btn btn-g" data-go="rank">🏆 順位表を見る</button>'
       +'<button class="btn btn-g" data-go="home">ホームへ</button>'
     +'</div>';
-  const mode=G.mode, cat=G.cat, yr=G.year, drill=G.drill;
+  const mode=G.mode, cat=G.cat, yr=G.year, drill=G.drill, review=G.review;
   show("sRes");
   $("rAgain").addEventListener("click",()=>
-    mode==="ta" ? startTa() : mode==="pq" ? startPq(yr) : drill ? startDrill() : startStage(cat));
+    mode==="ta" ? startTa() : mode==="pq" ? startPq(yr) : review ? startReview() : drill ? startDrill() : startStage(cat));
 }
 
 /* ══════════════════════════════════════════════════════
@@ -2817,6 +2870,7 @@ async function renderAdmin(){
       +'<div class="adm-cats">'+cats+'</div>'
       +'<div class="adm-bar"><i style="width:'+Math.min(100,Math.round(rankProgress(tc)*100))+'%"></i></div>'
       +'<div class="adm-note">'+ta+'問 解答　タイムアタック最高 '+(r.best_ta||0)+'問　'
+        +'復習残 '+Object.keys(((r.own||{}).miss)||{}).length+'問　'
         +'次の称号まで '+(toNextRank(tc)===null?"最上位":"あと"+toNextRank(tc)+"問")+'</div>'
     +'</div>';
   }).join("");
@@ -2855,7 +2909,9 @@ function ensureDay(){
 /* 問題の識別子。配列の順番が変わっても変わらんように中身から作る。
    本文の先頭だけやと「宅地建物取引業の免許…に関する次の記述のうち」みたいな
    書き出しが同じ問が全部くっついてしまうけん、出典・本文全体・選択肢まで混ぜる */
+const _qidMemo = new WeakMap();
 function qid(q){
+  if(_qidMemo.has(q)) return _qidMemo.get(q);
   const s = q.cat+"|"+(q.y||"")+"#"+(q.n||"")+"|"+(q.src||"")+"|"+q.q+"|"+(q.c||[]).join("|");
   let h1=5381, h2=52711;
   for(let i=0;i<s.length;i++){
@@ -2863,7 +2919,9 @@ function qid(q){
     h1=((h1*33)^c)>>>0;
     h2=((h2*31)+c)>>>0;
   }
-  return h1.toString(36)+h2.toString(36);
+  const id = h1.toString(36)+h2.toString(36);
+  _qidMemo.set(q, id);
+  return id;
 }
 const TOTAL_Q = ()=> QPOOL.length;
 ["pointerdown","keydown","wheel","touchstart"].forEach(ev=>
