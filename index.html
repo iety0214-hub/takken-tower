@@ -2111,6 +2111,17 @@ async function pushMe(){
     sbOk=true;
   }catch(e){ sbOk=false; }
 }
+/* 管理者用。コンソールで adminReset("髙田") と打つとその人の行を初期化する。
+   own.meta.reset に時刻を入れるけん、古い保存を持っとる端末も次に開いたときに従う */
+async function adminReset(name){
+  const row=Object.assign(rowOf(fresh()),{
+    own:{theme:["dawn"],title:["t0"],icon:["i0"],meta:{reset:Date.now()}},
+    last_played:null
+  });
+  await sb(SB_TBL+"?name=eq."+encodeURIComponent(name),{method:"PATCH",headers:{Prefer:"return=minimal"},body:JSON.stringify(row)});
+  if(ME===name){ try{ localStorage.removeItem(KEY_OF(name)); }catch(e){} }
+  return name+" をリセットした";
+}
 async function pullAll(){
   try{ const rows=await sb(SB_TBL+"?select=*"); sbOk=true; return rows; }
   catch(e){ sbOk=false; return null; }
@@ -2137,7 +2148,15 @@ async function pullMe(){
   const rows=await pullAll(); if(!rows) return;
   TEAM=rows;
   const r=rows.find(x=>x.name===ME); if(!r){ drawWeek(); return; }
-  if((r.total_correct||0)>S.totalCorrect){
+  /* 管理者がリセットした行（own.meta.reset がこの端末より新しい）なら、
+     手元に残っとる古い保存を捨てる。これをせんと古い端末が開いた瞬間に押し返してしまう */
+  const srvReset=(((r.own||{}).meta||{}).reset)||0;
+  if(srvReset > (meta().reset||0)){
+    S=fresh(); meta().reset=srvReset;
+    try{ localStorage.setItem(KEY_OF(ME),JSON.stringify(S)); }catch(e){}
+    ensureDaily(); syncHud();
+    toast("成績がリセットされとる。最初からやね");
+  }else if((r.total_correct||0)>S.totalCorrect){
     S=Object.assign(fresh(),{
       coin:r.coin, totalCorrect:r.total_correct, answered:r.total_answered,
       bestTa:r.best_ta, sinceTk:r.since_tk,
