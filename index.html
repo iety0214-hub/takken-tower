@@ -308,6 +308,23 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
 .rv-kind{font-size:12px;color:var(--muted);margin-top:6px}
 .rv-dup{margin-top:14px;font-size:12.5px;color:var(--amber)}
 
+/* ── 11連の結果。1枚ずつ11回出すと長いけん一覧で見せる ── */
+.reveal.rv11{align-items:start;overflow-y:auto;padding:20px 16px 28px;background:var(--ground)}
+.rv11-in{width:100%;max-width:420px;margin:auto}
+.rv11-h{text-align:center;margin-bottom:14px}
+.rv11-h .t{font-family:"Dela Gothic One",sans-serif;font-size:21px;color:var(--ink)}
+.rv11-h .s{font-size:12px;color:var(--muted);margin-top:5px;line-height:1.8}
+.rv11-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.rv11-c{border:1px solid var(--line);border-radius:11px;padding:9px 5px;background:var(--surface);
+  text-align:center;border-top:3px solid var(--rc);animation:pop .38s cubic-bezier(.2,1.5,.4,1) backwards;
+  animation-delay:calc(var(--i) * .045s)}
+.rv11-c .e{font-size:27px;line-height:1.25}
+.rv11-c .r{font-family:"Chivo Mono",monospace;font-size:8.5px;letter-spacing:.09em;font-weight:700;color:var(--rc)}
+.rv11-c .n{font-size:9.5px;color:var(--muted);margin-top:2px;line-height:1.35;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.rv11-c.dup{opacity:.6}
+.rv11-c.dup .n{color:var(--amber)}
+
 /* ── 節目の演出。ガチャと同じ .reveal を使い回す ── */
 .celeb{background:var(--ground);cursor:pointer;animation:fadeIn .18s ease-out}
 .celeb.out{animation:fadeOut .26s ease-in forwards}
@@ -527,6 +544,10 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
   <section id="sGacha" class="hidden">
     <div class="sec-h" style="margin-top:18px"><h2>ガチャ</h2><span class="eyebrow" id="gCoin"></span></div>
     <div class="gtiers" id="gTiers"></div>
+    <p class="foot" style="margin-top:14px">
+      11連は<b>10回ぶんの代金で11回</b>引ける。確率は1回引きと同じで、1回ぶんおまけになるだけっちゃ。<br>
+      すでに持っとるものが出たら重複としてコインが戻る（N30／R80／SR200／UR600）。
+    </p>
     <div class="stack"><button class="btn btn-g" data-go="home">もどる</button></div>
   </section>
 
@@ -3180,7 +3201,7 @@ function renderGacha(){
   ensureTk();
   $("gTiers").innerHTML=TIER_ORDER.map(k=>{
     const t=TIERS[k], lock=myRank()<t.rank;
-    const od=t.odds;
+    const od=t.odds, c11=pull11Cost(t);
     return '<div class="gt'+(lock?' locked':'')+'" data-t="'+k+'">'
       +'<div class="gt-h"><strong>'+t.n+'</strong><span class="tk">🎟 '+S.tk[k]+'</span></div>'
       +'<div class="gt-odds">N '+od.N+'%　R '+od.R+'%　SR '+od.SR+'%　UR '+od.UR+'%</div>'
@@ -3190,21 +3211,32 @@ function renderGacha(){
             ? '<button disabled title="コインでは買えん">買えん</button>'
             : '<button data-pull="'+k+'" data-pay="coin"'+((lock||S.coin<t.cost)?' disabled':'')+'>🪙 '+t.cost+'</button>')
       +'</div>'
+      /* 11連。10回ぶんの代金で11回引ける */
+      +'<div class="gt-acts" style="margin-top:8px">'
+        +'<button class="pri" data-pull11="'+k+'" data-pay="tk"'
+          +((lock||S.tk[k]<PULL11_PAY)?' disabled':'')+'>11連 🎟'+PULL11_PAY+'</button>'
+        +(c11==null
+            ? '<button disabled title="コインでは買えん">買えん</button>'
+            : '<button data-pull11="'+k+'" data-pay="coin"'+((lock||S.coin<c11)?' disabled':'')
+              +'>11連 🪙 '+c11.toLocaleString()+'</button>')
+      +'</div>'
       +(lock?'<div class="gt-lock">ランク'+t.rank+'で解放</div>':'')
     +'</div>';
   }).join("");
   $("gTiers").querySelectorAll("[data-pull]").forEach(b=>
     b.addEventListener("click",()=>pull(b.dataset.pull,b.dataset.pay)));
+  $("gTiers").querySelectorAll("[data-pull11]").forEach(b=>
+    b.addEventListener("click",()=>pull11(b.dataset.pull11,b.dataset.pay)));
 }
 function pickRarity(odds){
   const r=Math.random()*100; let acc=0;
   for(const k of ["UR","SR","R","N"]){ acc+=odds[k]; if(r<acc) return k; }
   return "N";
 }
-function pull(tier,pay){
+/* 1回ぶんの抽選。所持への追加と重複コインの戻しまでやって結果を返す。
+   1回引きも11連も、ここを1回まわすか11回まわすかの違いしかない */
+function drawOne(tier){
   const t=TIERS[tier];
-  if(pay==="tk"){ ensureTk(); if(!S.tk[tier]) return; S.tk[tier]--; }
-  else{ if(t.cost==null || S.coin<t.cost) return; S.coin-=t.cost; }
   let rar=pickRarity(t.odds);
   // そのレアリティに未所持がなければ下位へ落として、なければ重複扱い
   // 称号は通算正解数で解放されるので、ガチャの排出からは外しとる
@@ -3218,12 +3250,65 @@ function pull(tier,pay){
     const un=byRar(order[s]).filter(x=>!S.own[x.k].includes(x.i.id));
     if(un.length){ cand=un; rar=order[s]; break; }
   }
-  let got, dup=false;
+  let got, dup=false, back=0;
   if(cand.length){ got=cand[Math.floor(Math.random()*cand.length)]; S.own[got.k].push(got.i.id); }
-  else{ const all=byRar(rar).length?byRar(rar):byRar("N"); got=all[Math.floor(Math.random()*all.length)]; dup=true; S.coin+=DUP_COIN[rar]; }
-  save();
-  reveal(got,rar,dup);
+  else{ const all=byRar(rar).length?byRar(rar):byRar("N"); got=all[Math.floor(Math.random()*all.length)];
+        dup=true; back=DUP_COIN[rar]; S.coin+=back; }
+  return {got,rar,dup,back};
 }
+function pull(tier,pay){
+  const t=TIERS[tier];
+  if(pay==="tk"){ ensureTk(); if(!S.tk[tier]) return; S.tk[tier]--; }
+  else{ if(t.cost==null || S.coin<t.cost) return; S.coin-=t.cost; }
+  const d=drawOne(tier);
+  save();
+  reveal(d.got,d.rar,d.dup);
+}
+
+/* ══ 11連 ══ 10回ぶんの代金で11回引ける。1回ぶんが得になるだけで、確率は同じ */
+const PULL11_PAY = 10;                 // 支払う枚数（コインは cost×これ）
+const PULL11_DRAW = 11;                // 実際に引く回数
+const pull11Cost = t => t.cost==null ? null : t.cost*PULL11_PAY;
+function pull11(tier,pay){
+  const t=TIERS[tier];
+  if(pay==="tk"){ ensureTk(); if(S.tk[tier]<PULL11_PAY) return; S.tk[tier]-=PULL11_PAY; }
+  else{ const c=pull11Cost(t); if(c==null || S.coin<c) return; S.coin-=c; }
+  const res=[]; for(let i=0;i<PULL11_DRAW;i++) res.push(drawOne(tier));
+  save();
+  reveal11(res);
+}
+/* 11連の結果。新規と重複をまとめて出して、一番よかった新規は その場で装備できる */
+function reveal11(res){
+  const news=res.filter(r=>!r.dup), dups=res.filter(r=>r.dup);
+  const back=dups.reduce((a,r)=>a+r.back,0);
+  const order=["UR","SR","R","N"];
+  const best=news.slice().sort((a,b)=>order.indexOf(a.rar)-order.indexOf(b.rar))[0];
+  const glyphOf=g=> g.k==="icon" ? g.i.e : (g.k==="theme" ? "🌆" : "🎖️");
+
+  const el=document.createElement("div");
+  el.className="reveal rv11";
+  el.innerHTML='<div class="rv11-in">'
+    +'<div class="rv11-h"><div class="t">'+res.length+'連の結果</div>'
+      +'<div class="s">新しく手に入れた <b>'+news.length+'</b> 件'
+      +(dups.length?'　／　重複 '+dups.length+' 件 → 🪙 +'+back:'')+'</div></div>'
+    +'<div class="rv11-grid">'+res.map((r,i)=>{
+        const R=RARE[r.rar];
+        return '<div class="rv11-c'+(r.dup?' dup':'')+'" style="--rc:'+R.c+';--i:'+i+'">'
+          +'<div class="e">'+glyphOf(r.got)+'</div>'
+          +'<div class="r">'+R.l+'</div>'
+          +'<div class="n">'+(r.dup?'重複 +'+r.back:r.got.i.n)+'</div></div>';
+      }).join("")+'</div>'
+    +'<div class="stack" style="margin-top:18px">'
+      +(best?'<button class="btn btn-p" id="rvEq11">'+best.got.i.n+' を使う</button>':'')
+      +'<button class="btn btn-g" id="rvClose11">閉じる</button></div>'
+  +'</div>';
+  document.body.appendChild(el);
+  const close=()=>{ el.remove(); renderGacha(); };
+  el.querySelector("#rvClose11").addEventListener("click",close);
+  const eq=el.querySelector("#rvEq11");
+  if(eq) eq.addEventListener("click",()=>{ S.eq[best.got.k]=best.got.i.id; save(); toast("装備した"); close(); });
+}
+
 function reveal(got,rar,dup){
   const R=RARE[rar], kindName={theme:"街のテーマ",title:"称号",icon:"アイコン"}[got.k];
   const glyph = got.k==="icon" ? got.i.e : (got.k==="theme" ? "🌆" : "🎖️");
