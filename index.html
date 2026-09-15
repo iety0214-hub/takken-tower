@@ -468,7 +468,7 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
       <div class="modes">
         <button class="mode hot" data-go="stage"><div class="mode-ico">🏗</div><div class="mode-b"><strong>ステージ</strong><span id="stSub">科目を選んで10問。ライフ3</span></div><div class="mode-go">›</div></button>
         <button class="mode" data-go="ox"><div class="mode-ico">⭕</div><div class="mode-b"><strong>肢別 ○×</strong><span id="oxSub">1肢ずつ○か×か。20本で1セット</span></div><div class="mode-go">›</div></button>
-        <button class="mode" data-go="ta"><div class="mode-ico">⏱</div><div class="mode-b"><strong>タイムアタック</strong><span id="taSub">60秒で何問解けるか</span></div><div class="mode-go">›</div></button>
+        <button class="mode" data-go="ta"><div class="mode-ico">⏱</div><div class="mode-b"><strong>タイムアタック</strong><span id="taSub">60秒で○×を何問正解できるか</span></div><div class="mode-go">›</div></button>
         <button class="mode" data-go="pq"><div class="mode-ico">📜</div><div class="mode-b"><strong>鬼レベル模試</strong><span id="pqSub">2セットから選んで45問通し。週1回だけ</span></div><div class="mode-go">›</div></button>
       </div>
       <div class="links">
@@ -2596,8 +2596,8 @@ function renderHome(){
     : "1肢ずつ○か×か。20本で1セット";
   const ts=$("taSub");
   if(ts) ts.textContent = S.bestTa
-    ? "自己ベスト "+S.bestTa+"問・60秒で何問解けるか"
-    : "60秒で何問解けるか";
+    ? "自己ベスト "+S.bestTa+"問・60秒で○×を何問正解できるか"
+    : "60秒で○×を何問正解できるか";
   const bp=hbp?"最高点 "+hbp.c+" / "+hbp.n+"・":"";
   const ps=$("pqSub");
   if(ps) ps.textContent = pqLocked()
@@ -2720,9 +2720,20 @@ function startPq(year){
 }
 const mmss = sec => Math.floor(sec/60)+":"+String(sec%60).padStart(2,"0");
 
+/* タイムアタックは肢別○×で出す（2026-09-15〜）。60秒で何本正解できるか。
+   出題の部品は肢別○×（renderOx / answerOx）をそのまま使い、G.ox で見分ける。
+   成績の扱いは今までのTAと同じ：通算の正答率・制覇率には入れず、自己ベストだけ残す */
+function oxItems(pool){
+  return pool.map(q=>{
+    const i=Math.floor(Math.random()*4);
+    const truth = oxPolarity(q)==="pos" ? i===q.a : i!==q.a;
+    return {q,i,truth};
+  });
+}
 function startTa(){
-  G={mode:"ta",list:shuffle(QPOOL),i:0,answered:0,correct:0,combo:0,maxCombo:0,lives:0,coin:0,left:60};
-  show("sQuiz"); renderQ();
+  const list=oxItems(shuffle(QPOOL.filter(q=>oxPolarity(q))));
+  G={mode:"ta",ox:true,list,i:0,answered:0,correct:0,combo:0,maxCombo:0,lives:0,coin:0,left:60};
+  show("sQuiz"); renderOx();
   clearInterval(timerId);
   timerId=setInterval(()=>{
     G.left--; paintStatus();
@@ -2858,7 +2869,7 @@ function bannedPos(seq){
    ・問の順番がもともとランダムなモード（鬼レベル模試以外）は、まだ出しとらん範囲だけ
      固定問が隣り合わんように並べ直してから探す。出る問の顔ぶれは変えん
    ・鬼レベル模試は問1〜45の順番を守る。固定問だけで条件を満たせん箇所は、それ以上どうにもできんけん受け入れる
-   ・タイムアタックはリストが長いけん60問ずつ先読みする */
+   ・リストが長いモード（mode "ta"）は60問ずつ先読みする。TAは9/15から肢別○×で出すけん今は通らん */
 const PLAN_CHUNK = 60;
 function planChunk(){
   const L=G.list, start=G.plan.length;
@@ -3008,6 +3019,9 @@ function oxPolarity(q){
       const truth = p==="pos" ? i===q.a : i!==q.a;
       const h=q.ec[i].slice(0,6);
       if((truth && /[×✕]/.test(h)) || (!truth && /[○◯]/.test(h))){ p=null; break; }
+      /* 解説の頭に○×が無い問は出さん。選択肢が「履行の請求」のような出来事の名前で、
+         ○×にすると何を問われとるか分からんくなる（令和７年度問9など） */
+      if(!/[○◯×✕]/.test(h)){ p=null; break; }
     }
   }
   _oxPol.set(q,p);
@@ -3023,11 +3037,7 @@ function startOx(){
   const cand=QPOOL.filter(q=>oxPolarity(q));
   const yet=cand.filter(q=>!(S.seen||{})[qid(q)]);
   const pool=shuffle(yet.length>=OX_N ? yet : cand).slice(0,OX_N);
-  const list=pool.map(q=>{
-    const i=Math.floor(Math.random()*4);
-    const truth = oxPolarity(q)==="pos" ? i===q.a : i!==q.a;
-    return {q,i,truth};
-  });
+  const list=oxItems(pool);
   G={mode:"ox",list,i:0,answered:0,correct:0,combo:0,maxCombo:0,lives:0,coin:0};
   show("sQuiz"); renderOx();
 }
@@ -3036,7 +3046,7 @@ function renderOx(){
   G.cur=q; G.locked=false;
   $("qTag").textContent=CATS[q.cat].name+(q.tp?"・"+q.tp:"");
   $("qTag").style.setProperty("--c",CATS[q.cat].c);
-  $("qNo").textContent="肢別 "+(G.i+1)+" / "+G.list.length;
+  $("qNo").textContent = G.mode==="ta" ? "Q"+(G.i+1) : "肢別 "+(G.i+1)+" / "+G.list.length;
   const ctx=oxContext(q);
   $("qText").innerHTML=(ctx?'<span class="ox-ctx">'+ctx+'</span>':'')+chText(q.c[it.i]);
   $("qExp").innerHTML="";
@@ -3060,7 +3070,16 @@ function answerOx(pick){
   let gc=0;
   if(ok){ G.correct++; G.combo++; G.maxCombo=Math.max(G.maxCombo,G.combo); gc=5; G.coin+=gc; noteHit(q); }
   else { G.combo=0; noteMiss(q); }
-  const m=meta(); m.ox=m.ox||{c:0,t:0}; m.ox.t++; if(ok) m.ox.c++;
+  if(G.mode==="ta"){
+    if(ok){
+      bumpMission("correct",q.cat,1);
+      bumpMission("combo",null,G.combo);
+      bumpMission("ta",null,1);
+    }
+    showCombo(G.combo);
+  }else{
+    const m=meta(); m.ox=m.ox||{c:0,t:0}; m.ox.t++; if(ok) m.ox.c++;   // 肢別○×の通算はモード単体ぶんだけ
+  }
   paintStatus();
   $("qExp").innerHTML=
     '<div class="exp"><h3 class="'+(ok?"ok":"ng")+'">'+(ok?"正解":"不正解　この肢は「"+(it.truth?"正しい":"誤り")+"」")+'</h3>'
@@ -3181,7 +3200,7 @@ function atEnd(){
 function nextLabel(){ return atEnd() ? "結果を見る" : "次の問題へ"; }
 function next(){
   if(atEnd()) return finish();
-  G.i++; G.mode==="ox" ? renderOx() : renderQ(); scrollTo(0,0);
+  G.i++; (G.mode==="ox" || G.ox) ? renderOx() : renderQ(); scrollTo(0,0);
 }
 
 function grantTicketIfDue(){
