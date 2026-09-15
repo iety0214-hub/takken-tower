@@ -2821,16 +2821,129 @@ function isPickChoices(cs){
   });
 }
 
+/* ══════════════════════════════════════════════════════
+   正解位置の配置（2026-09-15）
+   宅建checkスキルと同じ基準を、出題中にその場で守る。データは触らん。
+     E10：同じ正解位置が3問連続せん
+     E12：正解位置の並びのブロック（2〜22問幅）が直後にそのまま繰り返されん
+   2問連続は禁止せん（避けようとするとかえって規則的な巡回になる）。
+   ・並べ替えてよい問 … 条件を満たす位置からランダムに選ぶ。少ない位置ほど選ばれやすくして分布もならす
+   ・並べ替えられん問 … 元の位置のまま。その位置も履歴に積んで、前後の問で帳尻を合わせる
+   ══════════════════════════════════════════════════════ */
+const PERIOD_MAX = 22;
+/* 解説が他の肢を番号で指しとる問（「肢2と同様に」「選択肢1」など）は、並べ替えると解説とズレるけん固定。
+   「正解肢」「本肢」は位置を指さんけん対象外（入れると100問ほど無駄に固定してしまう） */
+const REF_OTHER = /(?<!正解|本)肢[アイウエ1-4１-４]|[アイウエ]肢|選択肢[アイウエ1-4１-４]/;
+const _canShuf = new WeakMap();
+function canShuffle(q){
+  if(!q || !q.ec) return false;              // 解説1本の問（個数問・組合せ問を含む）は固定
+  if(_canShuf.has(q)) return _canShuf.get(q);
+  const ok = !q.ec.some(e=>REF_OTHER.test(e));
+  _canShuf.set(q, ok);
+  return ok;
+}
+/* seq の末尾に足したら E10 / E12 に引っかかる位置の集合 */
+function bannedPos(seq){
+  const n=seq.length, ban=new Set();
+  if(n>=2 && seq[n-1]===seq[n-2]) ban.add(seq[n-1]);
+  for(let w=2; w<=Math.min(PERIOD_MAX, Math.floor((n+1)/2)); w++){
+    let same=true;                            // 直前ブロックと、足したあとの末尾ブロックが w-1 個まで一致しとるか
+    for(let k=1;k<w;k++){ if(seq[n-2*w+k]!==seq[n-w+k]){ same=false; break; } }
+    if(same) ban.add(seq[n-w]);
+  }
+  return ban;
+}
+/* セッションの先の分まで、正解位置をまとめて決める（G.plan[k] = k問目の正解位置）。
+   1問ずつ貪欲に決めると、固定問が続いたときに逃げ場がなくなるけん、後戻りして探す。
+   ・問の順番がもともとランダムなモード（鬼レベル模試以外）は、まだ出しとらん範囲だけ
+     固定問が隣り合わんように並べ直してから探す。出る問の顔ぶれは変えん
+   ・鬼レベル模試は問1〜45の順番を守る。固定問だけで条件を満たせん箇所は、それ以上どうにもできんけん受け入れる
+   ・タイムアタックはリストが長いけん60問ずつ先読みする */
+const PLAN_CHUNK = 60;
+function planChunk(){
+  const L=G.list, start=G.plan.length;
+  const N = G.mode==="ta" ? start+PLAN_CHUNK : Math.max(start+1, L.length);
+  const at = k => L[k % L.length];
+
+  const canReorder = G.mode!=="pq" && start < L.length;
+  const reorder = () => {
+    const end=Math.min(N, L.length);
+    const part=L.slice(start,end);
+    const fixed=shuffle(part.filter(q=>!canShuffle(q)));
+    const free =shuffle(part.filter(q=> canShuffle(q)));
+    // 固定問を自由な問のあいだに均等に散らす
+    const out=[]; const gaps=free.length+1; const every=fixed.length ? gaps/fixed.length : Infinity;
+    let fi=0, nextAt=every/2;
+    for(let g=0; g<gaps; g++){
+      while(fi<fixed.length && g+0.5>=nextAt){ out.push(fixed[fi++]); nextAt+=every; }
+      if(g<free.length) out.push(free[g]);
+    }
+    while(fi<fixed.length) out.push(fixed[fi++]);
+    for(let k=0;k<out.length;k++) L[start+k]=out[k];
+  };
+
+  let hist, res, budget;
+  const order = h => {                         // 少ない位置ほど先に試す（同数はランダム）
+    const cnt=[0,0,0,0]; h.forEach(p=>cnt[p]++);
+    return shuffle([0,1,2,3]).map(p=>[p, cnt[p]+Math.random()*0.9]).sort((x,y)=>x[1]-y[1]).map(x=>x[0]);
+  };
+  const dfs = k => {
+    if(k===N) return true;
+    if(--budget<0) return false;
+    const q=at(k), ban=bannedPos(hist);
+    const cands = canShuffle(q) ? order(hist) : [q.a];
+    for(const p of cands){
+      if(ban.has(p)) continue;
+      hist.push(p); res.push(p);
+      if(dfs(k+1)) return true;
+      hist.pop(); res.pop();
+      if(budget<0) return false;
+    }
+    return false;
+  };
+  // 固定問が多くて解けんときは、固定問の並びを変えて何度か試す（鬼レベル模試は順番を守るけん1回だけ）
+  let found=false;
+  for(let attempt=0; attempt<(canReorder?30:1) && !found; attempt++){
+    if(canReorder) reorder();
+    hist=G.plan.slice(); res=[]; budget=20000;
+    found=dfs(start);
+  }
+  if(!found){
+    // 条件を満たす並びが見つからんかった（固定問が並んどる模試の一部など）。1問ずつ、なるべく守る
+    res.length=0; const h=G.plan.slice();
+    for(let k=start;k<N;k++){
+      const q=at(k);
+      let p;
+      if(!canShuffle(q)) p=q.a;
+      else{
+        const ban=bannedPos(h); const c=order(h).filter(x=>!ban.has(x));
+        p = c.length ? c[0] : order(h)[0];
+      }
+      h.push(p); res.push(p);
+    }
+  }
+  G.plan.push(...res);
+}
+
 function renderQ(){
+  G.plan = G.plan || []; G.maps = G.maps || {};
+  if(!G.maps[G.i] && G.plan[G.i]==null) planChunk();   // 並べ直しがあるけん、問はこのあとで取り直す
   const q=G.list[G.i % G.list.length];
   G.cur=q; G.locked=false;
-  /* 選択肢は毎回シャッフルする。位置で覚えるのを防ぐため。
-     ただし
-       ・鬼レベル模試は本試験の再現なので並びも番号もそのまま
-       ・肢ごとの解説（ec）を持っとらん問も混ぜん。
-         解説の「ア＝×」が画面の「ア」とズレてしまうけん。
-         個数問（一つ／二つ／…）もここに入る。並べ替えても読みにくいだけっちゃ */
-  G.map = (G.mode==="pq" || !q.ec) ? [0,1,2,3] : shuffle([0,1,2,3]);
+  /* 並べ替えてよい問は、G.plan で決めた位置に正解を置いて残り3肢をシャッフルする。
+     同じ問を描き直したときは前に決めた並びを使う */
+  if(G.maps[G.i]){
+    G.map = G.maps[G.i];
+  }else{
+    if(canShuffle(q)){
+      const pos=G.plan[G.i];
+      const rest=shuffle([0,1,2,3].filter(x=>x!==q.a));
+      G.map=[]; for(let i=0,k=0;i<4;i++) G.map.push(i===pos ? q.a : rest[k++]);
+    }else{
+      G.map=[0,1,2,3];
+    }
+    G.maps[G.i]=G.map;
+  }
   G.ans = G.map.indexOf(q.a);
   $("qTag").textContent=CATS[q.cat].name+(q.tp?"・"+q.tp:"");
   $("qTag").style.setProperty("--c",CATS[q.cat].c);
