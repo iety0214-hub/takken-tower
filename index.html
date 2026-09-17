@@ -235,6 +235,14 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
 .blind-dir{display:inline-block;font-size:13.5px;font-weight:700;padding:7px 14px;border-radius:99px;
   border:1px solid var(--line-strong);background:var(--surface-2);color:var(--ink)}
 .blind-dir.neg{color:var(--bad);border-color:var(--bad);background:rgba(242,73,107,.06)}
+.blind-why{margin:0 0 11px;padding:12px 13px;border-radius:11px;background:var(--surface-2);
+  border:1px solid var(--line);font-size:12.5px;line-height:1.9}
+.blind-why ol{margin:6px 0 0;padding-left:1.15em}
+.blind-why li{margin-bottom:4px}
+.blind-why b.k{font-family:"Chivo Mono",monospace;font-size:12px;padding:1px 6px;border-radius:5px;
+  background:var(--surface);border:1px solid var(--line)}
+.blind-why .last{margin-top:9px;padding-top:8px;border-top:1px solid var(--line);font-weight:700}
+.blind-why .ok{color:var(--good)} .blind-why .ng{color:var(--muted)}
 .blind-reveal{margin:0 0 11px;padding:12px 13px;border-radius:11px;background:var(--surface);
   border:1px solid var(--line);font-size:13px;line-height:1.85}
 .blind-reveal .eyebrow{margin-bottom:6px}
@@ -3084,6 +3092,69 @@ function blindStats(list){
   }
   return r;
 }
+/* その問を「選択肢だけ」でどう絞れるか。画面に出とる並び（G.map）に合わせて記号で示す */
+function blindWhy(q){
+  const c=q.c.map(x=>chText(x));
+  const pos=d=>G.map.indexOf(d), K=d=>"アイウエ"[pos(d)];
+  const byLen=[0,1,2,3].slice().sort((i,j)=>c[j].length-c[i].length);
+  const neg=askDir(q)==="neg";
+  const li=[];
+
+  li.push("<li>長さは <b class=\"k\">"+K(byLen[0])+"</b>"+c[byLen[0]].length+"字 ＞ <b class=\"k\">"
+    +K(byLen[1])+"</b>"+c[byLen[1]].length+"字 ＞ <b class=\"k\">"+K(byLen[2])+"</b>"+c[byLen[2]].length
+    +"字 ＞ <b class=\"k\">"+K(byLen[3])+"</b>"+c[byLen[3]].length+"字。長い2本は <b class=\"k\">"
+    +K(byLen[0])+"</b><b class=\"k\">"+K(byLen[1])+"</b></li>");
+
+  const dan=[0,1,2,3].filter(i=>BLIND_DAN.test(c[i]));
+  if(dan.length) li.push("<li>断定語「"+dan.map(i=>c[i].match(BLIND_DAN)[0]).join("」「")+"」が "
+    +dan.map(i=>'<b class="k">'+K(i)+'</b>').join("")+" に。"
+    +(neg?"この問は<b>誤っているもの</b>を聞いとるけん、ここが<b>本命</b>（全体43%）"
+         :"この問は<b>正しいもの</b>を聞いとるけん、ここは<b>切ってよい</b>（全体13%）")+"</li>");
+
+  const kan=[0,1,2,3].filter(i=>BLIND_KAN.test(c[i]));
+  if(kan.length && !neg) li.push("<li>緩和語「"+kan.map(i=>c[i].match(BLIND_KAN)[0]).join("」「")+"」が "
+    +kan.map(i=>'<b class="k">'+K(i)+'</b>').join("")+" に。条件つきの言い方は残りやすい"
+    +(kan.length===1?"（1本だけなら全体41%）":"")+"</li>");
+
+  // 似た者ペア
+  const bg=t=>{ t=t.replace(/[\s　、。（）()「」]/g,""); const a=new Set();
+    for(let i=0;i<t.length-1;i++) a.add(t.slice(i,i+2)); return a; };
+  const B=[0,1,2,3].map(i=>bg(c[i]));
+  let best=[-1,null];
+  for(let i=0;i<4;i++) for(let j=i+1;j<4;j++){
+    let inter=0; B[i].forEach(x=>{ if(B[j].has(x)) inter++; });
+    const sc=inter/Math.max(1,(B[i].size+B[j].size-inter));
+    if(sc>best[0]) best=[sc,[i,j]];
+  }
+  if(best[0]>=0.45) li.push("<li>言い回しがそっくりな2本 <b class=\"k\">"+K(best[1][0])+"</b><b class=\"k\">"
+    +K(best[1][1])+"</b>。作問側が迷わせにきとる印で、ここに正解が入る（全体60%）</li>");
+
+  // 数字が4本とも違う
+  const NUM=/(\d[\d,]*)\s*(年|月|日|か月|％|%|万円|円|㎡|平方メートル|以内|以上|以下)/;
+  const v=c.map(x=>{const m=x.match(NUM); return m?parseFloat(m[1].replace(/,/g,"")):null;});
+  if(v.every(x=>x!==null) && new Set(v).size===4){
+    const o=[0,1,2,3].slice().sort((i,j)=>v[i]-v[j]);
+    li.push("<li>数字が4本とも違う。両端 <b class=\"k\">"+K(o[0])+"</b><b class=\"k\">"+K(o[3])
+      +"</b> より、中間の <b class=\"k\">"+K(o[1])+"</b><b class=\"k\">"+K(o[2])+"</b>（全体57%）</li>");
+  }
+
+  // 結論：断定語を捨てて残りの長い2本（いちばん強い絞り方）
+  const rest=[0,1,2,3].filter(i=>!(neg?false:dan.indexOf(i)>=0)).sort((i,j)=>c[j].length-c[i].length);
+  const two=rest.slice(0,2), hit=two.indexOf(q.a)>=0;
+  /* 2番目と3番目の長さが近いと、長さでの線引きはあてにならん。
+     ほかの手がかり（断定語・緩和語・似た者ペア・数字）も無いなら、素直に本文を読むべき問 */
+  const gap = rest.length>2 ? c[rest[1]].length - c[rest[2]].length : 99;
+  const weak = gap < 8 && li.length<=1;
+  const last = '<div class="last '+(weak?"ng":(hit?"ok":"ng"))+'">'
+      +(neg?"長い2本":"断定語を捨てて残りの長い2本")+" <b class=\"k\">"+K(two[0])+"</b><b class=\"k\">"+K(two[1])+"</b> に絞れる → "
+      +(hit?"正解はこの中やった":"正解 <b class=\"k\">"+K(q.a)+"</b> は外れとった。この問では効かん")
+      +(weak?'<div style="font-weight:400;margin-top:5px">ただし2番目と3番目の差が'+gap
+        +'字しかないけん、この線引きは当てにならん。ほかの手がかりも無いし、本文を読むしかない問っちゃ</div>':'')
+      +"</div>";
+
+  return '<div class="blind-why"><div class="eyebrow">選択肢だけで絞るなら</div><ol>'
+    +li.join("")+'</ol>'+last+'</div>';
+}
 function blindBlock(list){
   const s=blindStats(list);
   const row=(name,val,all)=>
@@ -3370,7 +3441,8 @@ function answer(pick){
   const sp2=G.blind?splitStatements(q.q):null;
   $("qExp").innerHTML =
     '<div class="exp"><h3 class="'+(ok?"ok":"ng")+'">'+(ok?"正解":"不正解　正解は「"+CHKEYS()[G.ans]+"」")+'</h3>'
-    +(G.blind?'<div class="blind-reveal"><div class="eyebrow">伏せとった本文</div>'
+    +(G.blind?blindWhy(q)
+        +'<div class="blind-reveal"><div class="eyebrow">伏せとった本文</div>'
         +(sp2?stmtHtml(sp2):esc(q.q))+'</div>':'')
     +expHtml(q, pick)
     +(q.warn?'<div class="warn"><b>⚠ 出題後に法改正あり</b>'+q.warn+'</div>':'')
