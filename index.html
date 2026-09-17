@@ -230,6 +230,14 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
 .exp p{margin:0;font-size:13px;line-height:1.85;color:#4A4160}
 .exp .gain{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
 .ox-ctx{display:block;font-size:11.5px;color:var(--muted);margin-bottom:8px;line-height:1.7}
+/* 選択肢だけモード */
+.blind-note{display:block;font-size:11.5px;color:var(--muted);margin-bottom:11px;line-height:1.7}
+.blind-dir{display:inline-block;font-size:13.5px;font-weight:700;padding:7px 14px;border-radius:99px;
+  border:1px solid var(--line-strong);background:var(--surface-2);color:var(--ink)}
+.blind-dir.neg{color:var(--bad);border-color:var(--bad);background:rgba(242,73,107,.06)}
+.blind-reveal{margin:0 0 11px;padding:12px 13px;border-radius:11px;background:var(--surface);
+  border:1px solid var(--line);font-size:13px;line-height:1.85}
+.blind-reveal .eyebrow{margin-bottom:6px}
 /* 個数問・組合せ問。本文に詰まっとる記述ア〜エを、表示のときだけ段に割る */
 .q-lead{display:block}
 .stmt{list-style:none;margin:13px 0 0;padding:0;display:grid;gap:8px}
@@ -468,6 +476,7 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
       <div class="modes">
         <button class="mode hot" data-go="stage"><div class="mode-ico">🏗</div><div class="mode-b"><strong>ステージ</strong><span id="stSub">科目を選んで10問。ライフ3</span></div><div class="mode-go">›</div></button>
         <button class="mode" data-go="ox"><div class="mode-ico">⭕</div><div class="mode-b"><strong>肢別 ○×</strong><span id="oxSub">1肢ずつ○か×か。20本で1セット</span></div><div class="mode-go">›</div></button>
+        <button class="mode" data-go="blind"><div class="mode-ico">🙈</div><div class="mode-b"><strong>選択肢だけ</strong><span id="blSub">本文を伏せて4択。消去法のカンを鍛える</span></div><div class="mode-go">›</div></button>
         <button class="mode" data-go="ta"><div class="mode-ico">⏱</div><div class="mode-b"><strong>タイムアタック</strong><span id="taSub">60秒で○×を何問正解できるか</span></div><div class="mode-go">›</div></button>
         <button class="mode" data-go="pq"><div class="mode-ico">📜</div><div class="mode-b"><strong>鬼レベル模試</strong><span id="pqSub">2セットから選んで45問通し。週1回だけ</span></div><div class="mode-go">›</div></button>
       </div>
@@ -516,9 +525,9 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
       ガチャ券は通算正解30問ごとに1枚。ランクが上がるほど良い券が出やすい。
       レジェンド券は鬼レベル模試38問以上か、毎週月曜11時の時点でタイムアタック1位のときだけ。<br>
       収録：権利関係・法令上の制限・税その他（税金）・宅建業法の4科目。<br>
-      ステージとタイムアタックは全1,034問から出る（オリジナル演習276＋本試験17回分758）。<br>
+      ステージとタイムアタックは全1,032問から出る（オリジナル演習274＋本試験17回分758）。<br>
       鬼レベル模試の90問は、本試験の過去問と半分以上かぶるけん模試モードだけで出す。<br>
-      いずれも令和8年4月1日施行の法令に合わせた改訂版。収録している1,124問すべてに解説が付いている。<br>
+      いずれも令和8年4月1日施行の法令に合わせた改訂版。収録している1,122問すべてに解説が付いている。<br>
       5点免除科目（住宅金融支援機構法／景品表示法／統計／土地／建物＝本試験 問46〜50）は収録していません。<br>
       解説は2026年8月時点の現行法にもとづく。進捗はこの端末のブラウザにのみ保存されます。
     </p>
@@ -704,8 +713,6 @@ const Q = [
 {"cat":"zei","tp":"不動産取得税","q":"不動産取得税に関する次の記述のうち、正しいものはどれか。","c":["不動産取得税は、国税であり、不動産の所在地を管轄する税務署長が課する。","相続による不動産の取得については、不動産取得税が課される。","不動産取得税の課税標準となる不動産の価格は、原則として、取得時における当該不動産の実際の売買価格による。","不動産取得税は、不動産の取得者に対して課されるものであり、取得の原因が有償であるか無償であるかを問わず課税される。"],"a":3,"ec":["×：不動産取得税は道府県税であり、税務署長ではなく道府県が課する（地方税法 73条の 2）。","×：相続による取得は形式的な移転として非課税とされる（地方税法 73条の 7 第 1号）。","×：課税標準は原則として固定資産課税台帳登録価格による（地方税法 73条の 13 第 1項）。実際の売買価格ではない。","○：売買・交換・贈与・新築等、有償無償を問わず「取得」の事実に着目して課税される（地方税法 73条の 2 第 1項）。"],"en":"ひっかけ：相続の非課税扱いを見落とさせる誤り。"},
 {"cat":"zei","tp":"登録免許税","q":"登録免許税に関する次の記述のうち、誤っているものはどれか。","c":["登録免許税は、不動産の登記を受ける者に対して課される国税である。","住宅用家屋の所有権の保存登記について、一定の要件を満たす場合、軽減税率の適用を受けることができる。","同一の不動産について、抵当権の設定登記を複数回行う場合であっても、登録免許税は最初の 1 回分のみ課される。","登録免許税の軽減税率の適用を受けるためには、当該住宅用家屋が新築又は取得後、一定期間内に登記を受けることその他の要件を満たす必要がある。"],"a":2,"ec":["○：登録免許税は登記等を受ける者に課される国税である（登録免許税法 2条・3条）。","○：住宅用家屋の所有権保存登記等には租税特別措置法上の軽減税率の特例がある（措置法 72条の 2等）。","×：登録免許税は登記を受けるごとにその都度課される（登録免許税法 2条）。複数回の設定登記があればその都度課税され、最初の 1 回分のみということはない。","○：軽減特例には、新築又は取得後 1年以内に登記を受けること等の要件がある（措置法 72条の 2等）。"],"en":"ひっかけ：1 件ごとに課税されるという原則を見落とさせる誤り。"},
 {"cat":"zei","tp":"地価公示・鑑定","q":"地価公示法に関する次の記述のうち、正しいものはどれか。","c":["土地鑑定委員会は、標準地について、毎年 1 回、2 人以上の不動産鑑定士の鑑定評価を求め、その結果を審査調整して正常な価格を判定し、これを公示する。","標準地は、土地鑑定委員会が、都市計画区域外の区域については、いかなる場合も選定することができない。","公示価格は、公共事業用地の取得価格算定の規準となるが、一般の土地取引における目安として用いられることはない。","土地収用法その他の法律による収用対象となる土地の収用に際しての補償金の算定について、公示価格を規準とする必要はない。"],"a":0,"ec":["○：土地鑑定委員会は毎年 1 回、2 人以上の不動産鑑定士の鑑定評価を求め、審査調整のうえ正常な価格を判定して公示する（地価公示法 2条 1項）。","×：公示区域は都市計画区域その他の土地取引が相当程度見込まれる区域であり、都市計画区域外でも標準地を選定できる（同法 2条 1項）。","×：公示価格は一般の土地取引の指標としても活用される（同法 1条の 2）。","×：収用に際しての補償金の算定についても公示価格を規準とする（同法 9条）。"],"en":"ひっかけ：公示価格の活用範囲を公共事業のみに限定させる誤り。"},
-{"cat":"zei","tp":"5点免除","q":"独立行政法人住宅金融支援機構に関する次の記述のうち、正しいものはどれか。","c":["機構は、民間金融機関による住宅ローンの供給を補完するため、自ら住宅の建設・購入資金の直接融資を業務の中心としている。","機構が行う証券化支援業務（買取型）の対象となる住宅ローンは、賃貸住宅の建設資金に係るものに限られる。","機構は、災害復興住宅融資その他の直接融資業務を、一切行っていない。","機構は、証券化支援業務（買取型）において、民間金融機関が貸し付けた住宅ローン債権を買い取り、これを担保として資産担保証券（MBS）を発行することにより、資金を調達する業務を行っている。"],"a":3,"ec":["×：機構の業務の中心は証券化支援業務であり、直接融資は政策上必要な分野に限定されている（機構法 13条）。","×：買取型の対象は主に本人又は親族が居住する住宅の建設・購入資金であり、賃貸住宅資金に限られない（機構法 13条 1項 1号）。","×：災害復興住宅融資等の直接融資業務を一定分野で行っている（機構法 13条 1項 5号等）。","○：買取型は住宅ローン債権を買い取り、これを担保として MBS を発行することにより資金を調達する仕組みである（機構法 13条 1項 1号・19条）。"],"en":"ひっかけ：業務の中心を直接融資と誤認させる誤り。"},
-{"cat":"zei","tp":"5点免除","q":"宅地建物取引業者の広告表示に関する次の記述のうち、不動産の表示に関する公正競争規約を含む不当景品類及び不当表示防止法上の考え方に照らして、適切なものはどれか。","c":["新築分譲マンションの完成前の広告について、直ちに取引可能な状態にないことを理由に、その旨を明示せず、あたかも取引可能であるかのように表示すること","物件までの徒歩所要時間は、道路距離 80m につき 1分間を要するものとして算出し、1分未満の端数は切り上げて表示すること","実際には存在しない物件を、あたかも存在するかのように表示して顧客を誘引すること","著しく事実に相違する表示又は実際のものよりも著しく優良若しくは有利であると人を誤認させるような表示を行うこと"],"a":1,"ec":["×：取引可能な状態にないことを明示せず、あたかも取引可能であるかのように表示することは不当表示であり、適切でない（公正競争規約 23条）。","○：徒歩所要時間は道路距離 80m につき 1分間として算出し、1分未満の端数は切り上げるとされており（公正競争規約施行規則 9条 9号）、適切な表示方法である。","×：存在しない物件を表示して顧客を誘引することは、おとり広告の典型であり適切でない（公正競争規約 21条）。","×：著しい優良誤認・有利誤認表示は禁止されており、適切でない（景品表示法 5条 1号・2号）。"],"en":"ひっかけ：「適切なものはどれか」の問いで、不当表示の説明文をそのまま選ばせようとする誤り。"},
 {"cat":"zei","tp":"不動産取得税","q":"不動産取得税に関する記述として、正しいものはどれか。","c":["不動産取得税は市町村が課する税である","相続により不動産を取得した場合にも、不動産取得税が課される","相続により不動産を取得した場合には、不動産取得税は課されない","不動産取得税の課税標準は、実際の売買価格である"],"a":2,"ec":["×：不動産取得税は都道府県が課する道府県税。市町村税なのは固定資産税のほう。","×：相続（包括遺贈・相続人への遺贈を含む）による取得は形式的な移転やけん非課税。","○：相続による取得には不動産取得税は課されない。売買・贈与・交換・新築など「取得」があるときに課される。","×：課税標準は固定資産課税台帳の登録価格。実際の売買価格は関係ない。"],"en":"ひっかけ：「相続は非課税、贈与は課税」の対比。都道府県税か市町村税かも毎回問われる。"},
 {"cat":"zei","tp":"固定資産税","q":"固定資産税に関する記述として、正しいものはどれか。","c":["固定資産税の納税義務者は、その年の1月1日現在において固定資産課税台帳に所有者として登録されている者である","固定資産税の納税義務者は、その年の4月1日現在の所有者である","固定資産税は都道府県が課する税である","固定資産税の標準税率は100分の3である"],"a":0,"ec":["○：賦課期日は1月1日。その日に固定資産課税台帳に所有者として登録されとる者が納税義務者。","×：4月1日ではなく1月1日。年の途中で売っても納税義務者は1月1日の所有者のまま。","×：固定資産税は市町村税。都道府県税なのは不動産取得税。","×：標準税率は1.4％。市町村は条例でこれと違う税率を定められる。"],"en":"ひっかけ：「1月1日の所有者」。日割り精算は当事者間の取決めにすぎず、法律上の納税義務者は変わらん。"},
 {"cat":"zei","tp":"固定資産税","q":"住宅用地に対する固定資産税の課税標準の特例に関する記述として、正しいものはどれか。","c":["住宅用地のうち200㎡以下の部分（小規模住宅用地）は、課税標準が価格の6分の1となる","住宅用地のうち200㎡以下の部分は、課税標準が価格の3分の1となる","住宅用地の特例は、面積にかかわらず一律に価格の2分の1である","住宅用地に対する課税標準の特例は設けられていない"],"a":0,"ec":["○：200㎡以下の部分（小規模住宅用地）は価格の6分の1が課税標準。","×：3分の1になるのは200㎡を超える一般住宅用地の部分。","×：面積で区分される。200㎡以下は6分の1、超える部分は3分の1。","×：住宅用地の課税標準の特例は地方税法に定められとる。"],"en":"ひっかけ：固定資産税は1/6・1/3、都市計画税は1/3・2/3。数字の対比で覚える。"},
@@ -2100,18 +2107,19 @@ function startToday(){
 }
 /* タイムアタック・鬼レベル模試・肢別○× は通算の正答率に混ぜとらん。ここに別枠で出す */
 function modeLogHtml(){
-  const m=meta(), ox=m.ox||{c:0,t:0}, bp=m.bestPq;
+  const m=meta(), ox=m.ox||{c:0,t:0}, bp=m.bestPq, bl=m.blind||{c:0,t:0};
   const line=(ico,name,val,sub)=>
     '<div style="display:flex;align-items:baseline;gap:10px;padding:9px 0;border-top:1px solid var(--line)">'
     +'<span style="flex:1;font-size:13px">'+ico+' '+name+'</span>'
     +'<b class="num" style="font-size:15px">'+val+'</b>'
     +'<span style="font-size:11px;color:var(--muted);width:74px;text-align:right">'+sub+'</span></div>';
   return '<div style="font-size:11.5px;color:var(--muted);line-height:1.8;padding-bottom:4px">'
-      +'この3つは通算の正答率・称号ランク・ガチャ券には入れとらん。'
+      +'この4つは通算の正答率・称号ランク・ガチャ券には入れとらん。'
       +'正答率に効くのはステージだけ（きょうの10問・復習・弱点論点もステージ扱い）。</div>'
     + line("⏱","タイムアタック", (S.bestTa||0)+" 問", "自己ベスト")
     + line("😈","鬼レベル模試", bp?bp.c+" / "+bp.n:"—", "最高点")
-    + line("⭕","肢別 ○×", ox.t?ox.c+" / "+ox.t:"—", ox.t?Math.round(ox.c/ox.t*100)+"%":"未挑戦");
+    + line("⭕","肢別 ○×", ox.t?ox.c+" / "+ox.t:"—", ox.t?Math.round(ox.c/ox.t*100)+"%":"未挑戦")
+    + line("🙈","選択肢だけ", bl.t?bl.c+" / "+bl.t:"—", bl.t?Math.round(bl.c/bl.t*100)+"%":"未挑戦");
 }
 function renderLog(){
   renderHome();          // 記録の中身もここで描いとる
@@ -2594,6 +2602,11 @@ function renderHome(){
   if(os) os.textContent = hox.t
     ? "通算 "+hox.c+" / "+hox.t+"（"+Math.round(hox.c/hox.t*100)+"%）・20本で1セット"
     : "1肢ずつ○か×か。20本で1セット";
+  const bl=hm.blind;
+  const bs=$("blSub");
+  if(bs) bs.textContent = bl && bl.t
+    ? "通算 "+bl.c+" / "+bl.t+"（"+Math.round(bl.c/bl.t*100)+"%）・本文を伏せて4択"
+    : "本文を伏せて4択。消去法のカンを鍛える";
   const ts=$("taSub");
   if(ts) ts.textContent = S.bestTa
     ? "自己ベスト "+S.bestTa+"問・60秒で○×を何問正解できるか"
@@ -2748,7 +2761,7 @@ function paintStatus(){
       +'<b style="color:var(--good);font-size:15px">'+G.correct+'</b> / '+G.answered+'</div>';
   }else if(G.mode==="stage"){
     $("qStatus").innerHTML='<div class="lives">'+[0,1,2].map(i=>'<i class="'+(i<G.lives?'on':'')+'">🏠</i>').join("")+'</div>';
-  }else if(G.mode==="ox"){
+  }else if(G.mode==="ox" || G.mode==="blind"){
     $("qStatus").innerHTML='<div class="num" style="font-size:12px;color:var(--muted)">正解 '
       +'<b style="color:var(--good);font-size:15px">'+G.correct+'</b> / '+G.answered+'</div>';
   }else if(G.mode==="pq"){
@@ -2958,11 +2971,17 @@ function renderQ(){
   G.ans = G.map.indexOf(q.a);
   $("qTag").textContent=CATS[q.cat].name+(q.tp?"・"+q.tp:"");
   $("qTag").style.setProperty("--c",CATS[q.cat].c);
-  $("qNo").textContent = G.mode==="stage" ? (G.review?"復習 ":"Q")+(G.i+1)+" / "+G.list.length
+  $("qNo").textContent = G.mode==="blind" ? "選択肢だけ "+(G.i+1)+" / "+G.list.length
+    : G.mode==="stage" ? (G.review?"復習 ":"Q")+(G.i+1)+" / "+G.list.length
     : G.mode==="pq" ? q.y+"　問"+q.n+"　（"+(G.i+1)+" / "+G.list.length+"）"
     : "Q"+(G.i+1);
   const sp=splitStatements(q.q);
-  if(sp) $("qText").innerHTML=stmtHtml(sp); else $("qText").textContent=q.q;
+  if(G.blind){
+    const neg=askDir(q)==="neg";
+    $("qText").innerHTML='<span class="blind-note">本文は伏せとる。選択肢だけで選ぶっちゃ</span>'
+      +'<span class="blind-dir'+(neg?" neg":"")+'">'+(neg?"誤っているもの":"正しいもの")+'を選ぶ</span>';
+  }
+  else if(sp) $("qText").innerHTML=stmtHtml(sp); else $("qText").textContent=q.q;
   $("qExp").innerHTML="";
   paintStatus();
   const keys=CHKEYS();
@@ -3003,6 +3022,86 @@ function expHtml(q, pick){
    肢ごとの解説（ec）を持ち、「正しいもの／誤っているもの」で聞いとる問だけが対象。
    正しいもの型 → 正解肢だけ○、誤っているもの型 → 正解肢だけ×
    ══════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════
+   選択肢だけ（2026-09-17）
+   本文を伏せて、設問の向き（正しいもの／誤っているもの）と選択肢4つだけで答える練習。
+   このアプリの1,019問で数えた実測：
+     断定語（必ず・すべて・一切・常に・いかなる）が入った肢が正解になるのは
+       「正しいもの」を問う問で 5.2%／「誤っているもの」を問う問で 41.4%（全体の基準は25%）
+     緩和語（原則として・場合がある・おそれ）が入った肢は 35.9%
+     いちばん長い肢は 36.4%／いちばん短い肢は 17.4%
+   向きが分からんと断定語のコツが裏返るけん、設問の向きだけは出す。
+   成績は通算の正答率・制覇率・復習リストには入れん。own.meta.blind に通算だけ持つ
+   ══════════════════════════════════════════════════════ */
+const BLIND_N = 10;
+function askDir(q){
+  if(/誤っているもの|誤りはどれか|誤っているのはどれか/.test(q.q)) return "neg";
+  if(/正しいもの|正しいのはどれか/.test(q.q)) return "pos";
+  return null;
+}
+const _blindOk = new WeakMap();
+function blindOk(q){
+  if(_blindOk.has(q)) return _blindOk.get(q);
+  const cs=(q.c||[]).map(c=>chText(c));
+  const ok = cs.length===4 && !!askDir(q)
+    && !cs.every(c=>/^[一二三四１-４1-4]つ$/.test(c))          // 個数問は本文なしでは意味が通らん
+    && !cs.every(c=>/^[アイウエａ-ｄa-d①-④、,・と\s]+$/.test(c)); // 組合せ問も同じ
+  _blindOk.set(q,ok);
+  return ok;
+}
+/* 結果画面に出す「今回の10問で、そのコツが実際に効いたか」。
+   全体の値はこのアプリの1,017問（ふつうの4択）で数えたもの */
+const BLIND_DAN=/必ず|すべて|全て|一切|常に|例外なく|いかなる|絶対に/;
+const BLIND_KAN=/原則として|場合がある|ことがある|おそれ|とすることができる/;
+function blindStats(list){
+  const r={n:list.length,long2:0,danOut2:0,longest:0,danAns:0,danN:0,kanLong:0,kanLongN:0,mid2:0,midN:0};
+  const NUM=/(\d[\d,]*)\s*(年|月|日|か月|％|%|万円|円|㎡|平方メートル|以内|以上|以下)/;
+  for(const q of list){
+    const c=q.c.map(x=>chText(x));
+    const byLen=[0,1,2,3].sort((i,j)=>c[j].length-c[i].length);
+    if(byLen[0]===q.a) r.longest++;
+    if(byLen.indexOf(q.a)<2) r.long2++;
+    const bad=[0,1,2,3].filter(i=>BLIND_DAN.test(c[i]));
+    if(bad.length){ r.danN++; if(bad.indexOf(q.a)>=0) r.danAns++; }
+    const rest=[0,1,2,3].filter(i=>bad.indexOf(i)<0).sort((i,j)=>c[j].length-c[i].length);
+    if(rest.indexOf(q.a)>=0 && rest.indexOf(q.a)<2) r.danOut2++;
+    if(BLIND_KAN.test(c[byLen[0]])){ r.kanLongN++; if(byLen[0]===q.a) r.kanLong++; }
+    const v=c.map(x=>{const m=x.match(NUM); return m?parseFloat(m[1].replace(/,/g,"")):null;});
+    if(v.every(x=>x!==null) && new Set(v).size===4){
+      r.midN++;
+      const ord=[0,1,2,3].sort((i,j)=>v[i]-v[j]);
+      if(ord.indexOf(q.a)===1 || ord.indexOf(q.a)===2) r.mid2++;
+    }
+  }
+  return r;
+}
+function blindBlock(list){
+  const s=blindStats(list);
+  const row=(name,val,all)=>
+    '<div style="display:flex;align-items:baseline;gap:8px;padding:7px 0;border-top:1px solid var(--line)">'
+    +'<span style="flex:1;font-size:12.5px;text-align:left">'+name+'</span>'
+    +'<b class="num" style="font-size:14px">'+val+'</b>'
+    +'<span style="font-size:10.5px;color:var(--muted);width:66px;text-align:right">全体 '+all+'</span></div>';
+  return '<div class="ticket-won" style="border-color:var(--line);background:var(--ground-2);text-align:left">'
+    +'<div class="eyebrow">この'+s.n+'問では、このコツが効いたか</div>'
+    + row("長い2本に正解が入っとった", s.long2+" / "+s.n, "62%")
+    + row("断定語を捨てて残りの長い2本", s.danOut2+" / "+s.n, "63%")
+    + row("いちばん長い肢が正解", s.longest+" / "+s.n, "36%")
+    + (s.kanLongN? row("最長＋緩和語の肢が正解", s.kanLong+" / "+s.kanLongN, "48%") : "")
+    + (s.danN? row("断定語の肢が正解", s.danAns+" / "+s.danN, "13%") : "")
+    + (s.midN? row("数字が4本とも違う→中間2本", s.mid2+" / "+s.midN, "60%") : "")
+    +'<div style="font-size:11px;color:var(--muted);margin-top:9px;line-height:1.85">'
+    +'「全体」はこのアプリの1,017問で数えた値っちゃ。緩和語は「原則として・場合がある・おそれ」。<br>'
+    +'ほかに効くのは、言い回しがそっくりな<b>似た者ペア</b>（そこに正解 60%）と<b>語尾が同じ2本</b>（55%）。<br>'
+    +'逆に<b>「のみ・だけ」も「数字が入っとる」も効かん</b>（どちらも25%前後で、当てずっぽうと変わらん）。'
+    +'</div></div>';
+}
+function startBlind(){
+  const list=shuffle(QPOOL.filter(blindOk)).slice(0,BLIND_N);
+  G={mode:"blind",blind:true,list,i:0,answered:0,correct:0,combo:0,maxCombo:0,lives:0,coin:0};
+  show("sQuiz"); renderQ();
+}
+
 const OX_N = 20;
 const _oxPol = new WeakMap();
 function oxPolarity(q){
@@ -3157,7 +3256,7 @@ function answer(pick){
   if(ok){
     G.correct++; G.combo++; G.maxCombo=Math.max(G.maxCombo,G.combo);
     const mult=Math.min(3,1+Math.floor(G.combo/3)*0.5);
-    gc=Math.round(10*mult);
+    gc = G.blind ? 5 : Math.round(10*mult);    // 本文を読まん分、コインは控えめ
     G.coin+=gc;
     const rkBefore=myRank();
     if(rec){
@@ -3166,22 +3265,28 @@ function answer(pick){
       // 正解した瞬間にランクを見る。結果画面まで待つと増え終わっとって比べられん
       if(myRank()>rkBefore){ ensureTitles(); G.rankUp=myRank(); }
     }
-    S.seen=S.seen||{}; S.seen[qid(q)]=1;      // クリア済みとして記録（制覇率はモードを問わん）
-    noteHit(q);                                // 復習リストに居ったら1歩前進
-    bumpMission("correct",q.cat,1);
-    bumpMission("combo",null,G.combo);
-    if(G.mode==="ta") bumpMission("ta",null,1);
+    if(!G.blind){                              // 本文を読んどらんけん、解いたことにはせん
+      S.seen=S.seen||{}; S.seen[qid(q)]=1;     // クリア済みとして記録（制覇率はモードを問わん）
+      noteHit(q);                              // 復習リストに居ったら1歩前進
+      bumpMission("correct",q.cat,1);
+      bumpMission("combo",null,G.combo);
+      if(G.mode==="ta") bumpMission("ta",null,1);
+    }
     showCombo(G.combo);
     if(rec) grantTicketIfDue();
   }else{
     G.combo=0; showCombo(0);
-    noteMiss(q);                               // 復習リストへ
+    if(!G.blind) noteMiss(q);                  // 復習リストへ（選択肢だけモードは入れん）
     if(G.mode==="stage") G.lives--;
   }
+  if(G.blind){ const m=meta(); m.blind=m.blind||{c:0,t:0}; m.blind.t++; if(ok) m.blind.c++; }
   paintStatus();
   const mult=Math.min(3,1+Math.floor(G.combo/3)*0.5);
+  const sp2=G.blind?splitStatements(q.q):null;
   $("qExp").innerHTML =
     '<div class="exp"><h3 class="'+(ok?"ok":"ng")+'">'+(ok?"正解":"不正解　正解は「"+CHKEYS()[G.ans]+"」")+'</h3>'
+    +(G.blind?'<div class="blind-reveal"><div class="eyebrow">伏せとった本文</div>'
+        +(sp2?stmtHtml(sp2):esc(q.q))+'</div>':'')
     +expHtml(q, pick)
     +(q.warn?'<div class="warn"><b>⚠ 出題後に法改正あり</b>'+q.warn+'</div>':'')
     +(ok?'<div class="gain"><span class="gain-p">🪙 +'+gc+'</span>'
@@ -3193,6 +3298,7 @@ function answer(pick){
 }
 function atEnd(){
   if(G.mode==="ox")    return G.i>=G.list.length-1;
+  if(G.mode==="blind") return G.i>=G.list.length-1;
   if(G.mode==="stage") return G.lives<=0 || G.i>=G.list.length-1;
   if(G.mode==="pq")    return G.i>=G.list.length-1;
   return false;
@@ -3250,7 +3356,7 @@ function finish(){
   const t=theme();
   $("sRes").innerHTML =
     '<div class="res card" style="border-color:'+(cleared||pqPass||G.mode==="ta"?"var(--amber)":"var(--line)")+'">'
-    +'<div class="eyebrow">'+(G.mode==="ta"?"TIME ATTACK":G.mode==="pq"?G.year:G.review?"REVIEW":G.today?"きょうの10問":(cleared?"STAGE CLEAR":"GAME OVER"))+'</div>'
+    +'<div class="eyebrow">'+(G.mode==="blind"?"選択肢だけ":G.mode==="ta"?"TIME ATTACK":G.mode==="pq"?G.year:G.review?"REVIEW":G.today?"きょうの10問":(cleared?"STAGE CLEAR":"GAME OVER"))+'</div>'
     +'<div class="big">'+G.correct+'<small> / '+asked+'</small></div>'
     +'<div style="color:var(--muted);font-size:12px;margin-top:6px" class="num">正答率 '+rate+'%'
       +(G.mode==="ta"?'　自己ベスト '+S.bestTa+'問':G.mode==="pq"&&meta().bestPq?'　最高点 '+meta().bestPq.c+' / '+meta().bestPq.n:'')+'</div>'
@@ -3260,6 +3366,7 @@ function finish(){
       +'<div><b>'+G.correct+'</b><span>正解</span></div>'
       +'<div><b style="color:'+(G.maxCombo>=3?"var(--good)":"inherit")+'">'+G.maxCombo+'</b><span>最大コンボ</span></div>'
     +'</div>'
+    +(G.mode==="blind"? blindBlock(G.list) : '')
     +(G.review?'<div class="ticket-won" style="border-color:var(--line);background:var(--ground-2)">'
         +'<div class="dsp" style="font-size:17px">復習リスト　残り '+missList().length+'問</div>'
         +'<div style="font-size:11.5px;color:var(--muted);margin-top:4px">'+REVIEW_OK+'回続けて正解した問は消える。間違えたらまた最初から</div></div>':'')
@@ -3303,7 +3410,7 @@ function finish(){
       title:"最高点 "+meta().bestPq.c+" / "+meta().bestPq.n,
       sub:pqPass?"合格ラインを超えた":"合格ラインまで あと"+Math.max(0,pqLine-G.correct)+"問"});
   $("rAgain").addEventListener("click",()=>
-    mode==="ta" ? startTa() : mode==="pq" ? startPq(yr) : review ? startReview() : topic ? startTopic(topic) : todayMode ? startToday() : drill ? startDrill() : startStage(cat));
+    mode==="blind" ? startBlind() : mode==="ta" ? startTa() : mode==="pq" ? startPq(yr) : review ? startReview() : topic ? startTopic(topic) : todayMode ? startToday() : drill ? startDrill() : startStage(cat));
 }
 
 /* ══════════════════════════════════════════════════════
@@ -3827,6 +3934,7 @@ document.addEventListener("click",e=>{
   if(g==="stage") chooseCat();
   else if(g==="ta") startTa();
   else if(g==="ox") startOx();
+  else if(g==="blind") startBlind();
   else if(g==="gacha") renderGacha();
   else if(g==="coll") renderColl();
   else if(g==="pq") choosePq();
