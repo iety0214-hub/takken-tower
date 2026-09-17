@@ -485,6 +485,7 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
         <button data-go="gacha">🎁 ガチャ</button>
         <button data-go="coll">🗂 コレクション</button>
         <button data-go="log">📈 記録</button>
+        <button data-go="tips">🧠 コツ</button>
         <button data-go="admin" id="lnkAdmin" hidden>👀 みんなの進捗</button>
       </div>
     </div>
@@ -591,6 +592,14 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
         <button class="btn btn-g" data-go="home">ホームへ</button>
         <button class="btn btn-g" data-go="pick">プレイヤーを切り替える</button></div>
     </div>
+  </section>
+
+  <section id="sTips" class="hidden">
+    <div class="sec">
+      <div class="sec-h" style="margin-top:6px"><h2>選択肢だけで絞るコツ</h2><span class="eyebrow">実測メモ</span></div>
+      <div id="tipsBody"></div>
+    </div>
+    <div class="stack"><button class="btn btn-g" data-go="home">ホームへ</button></div>
   </section>
 
   <section id="sColl" class="hidden">
@@ -2419,7 +2428,7 @@ function syncHud(){
   $("hXp").style.width=Math.round(rankProgress(S.totalCorrect)*100)+"%";
 }
 function show(id){
-  ["sHome","sQuiz","sRes","sGacha","sColl","sRank","sAdmin","sLog"].forEach(s=>$(s).classList.toggle("hidden",s!==id));
+  ["sHome","sQuiz","sRes","sGacha","sColl","sRank","sAdmin","sLog","sTips"].forEach(s=>$(s).classList.toggle("hidden",s!==id));
   scrollTo(0,0); syncHud();
 }
 
@@ -3094,8 +3103,84 @@ function blindBlock(list){
     +'「全体」はこのアプリの1,017問で数えた値っちゃ。緩和語は「原則として・場合がある・おそれ」。<br>'
     +'ほかに効くのは、言い回しがそっくりな<b>似た者ペア</b>（そこに正解 60%）と<b>語尾が同じ2本</b>（55%）。<br>'
     +'逆に<b>「のみ・だけ」も「数字が入っとる」も効かん</b>（どちらも25%前後で、当てずっぽうと変わらん）。'
-    +'</div></div>';
+    +'</div>'
+    +'<button class="btn btn-g" data-go="tips" style="margin-top:10px">🧠 コツをぜんぶ読む</button>'
+    +'</div>';
 }
+/* ══════════════════════════════════════════════════════
+   選択肢だけで絞るコツ（読み物）
+   数字はこのアプリの1,017問（個数問・組合せ問を除いたふつうの4択）で実際に数えたもの。
+   数え直すときは引き継ぎの「コツの実測値」の条件をそのまま回せばよか
+   ══════════════════════════════════════════════════════ */
+const TIPS_N = "1,017";
+const TIPS_2 = [
+  ["断定語を捨てて、残りのうち長い2本", "63%", "640 / 1,015"],
+  ["長い2本（何も考えず長さだけ）",     "62%", "634 / 1,017"],
+  ["似た者ペア（言い回しがそっくりな2本）","60%", "121 / 203"],
+  ["数字が4本とも違う問 → 中間の2本",   "57%", "16 / 28"],
+  ["語尾が同じ2本",                   "55%", "327 / 598"]
+];
+const TIPS_1 = [
+  ["いちばん長い肢に緩和語が付いとる",   "48%", "31 / 64"],
+  ["緩和語が1本だけに出とる → その肢",  "41%", "46 / 112"],
+  ["いちばん長い肢（無条件）",          "36%", "367 / 1,017"]
+];
+const TIPS_CUT = [
+  ["すべて・全て", "11%", "4 / 35"],
+  ["断定語ぜんぶ", "13%", "17 / 131"],
+  ["常に",        "18%", "6 / 34"]
+];
+const TIPS_NG = [
+  ["「のみ」「だけ」",        "25%", "24 / 96"],
+  ["数字が入っとる肢",        "26%", "389 / 1,473"],
+  ["打ち消しが少数派の肢",    "26%", "103 / 403"]
+];
+function tipRows(rows, unit){
+  return '<div style="margin-top:4px">'+rows.map(r=>
+    '<div style="display:flex;align-items:baseline;gap:9px;padding:8px 0;border-top:1px solid var(--line)">'
+    +'<span style="flex:1;font-size:13px">'+r[0]+'</span>'
+    +'<b class="num" style="font-size:15px">'+r[1]+'</b>'
+    +'<span style="font-size:10.5px;color:var(--muted);width:78px;text-align:right">'+r[2]+'</span></div>').join("")
+    +'<div style="font-size:11px;color:var(--muted);margin-top:7px">'+unit+'</div></div>';
+}
+function renderTips(){
+  show("sTips");
+  $("tipsBody").innerHTML =
+     '<div class="card" style="font-size:12.5px;line-height:1.95">'
+      +'本文を読む時間があるなら、読んだほうが早いし確実っちゃ。これは<b>手も足も出んときの最後の手段</b>。<br>'
+      +'数字はぜんぶ、このアプリの<b>'+TIPS_N+'問</b>（個数問・組合せ問を除いたふつうの4択）で実際に数えた値。'
+      +'当てずっぽうは4択で25%、2本に絞れたら50%。それを超えとるかどうかで見るっちゃ。</div>'
+
+    +'<div class="sec-h" style="margin-top:20px"><h2>① まず設問の向きを見る</h2></div>'
+    +'<div class="card" style="font-size:12.5px;line-height:1.95">'
+      +'「正しいものはどれか」か「誤っているものはどれか」か。ここだけは読む。<br>'
+      +'同じ手がかりでも<b>向きで答えが裏返る</b>けん、ここを外すと全部ひっくり返る。<br>'
+      +'たとえば断定語（必ず・すべて・一切・常に）が入った肢は、'
+      +'<b>「誤っているもの」問では43%で正解</b>（30本中13本）。狙う側に回るっちゃ。</div>'
+
+    +'<div class="sec-h" style="margin-top:20px"><h2>② 2本に絞る</h2><span class="eyebrow">基準50%</span></div>'
+    +'<div class="card">'+tipRows(TIPS_2,"右は「当たった数 / 試した数」")+'</div>'
+    +'<div class="card" style="margin-top:9px;font-size:12px;line-height:1.9;color:var(--muted)">'
+      +'いちばん強いのは<b>長さ</b>。正しい規定ほど条件や例外が付いて長くなるけん、短い肢は言い切りすぎて誤りになりやすい。<br>'
+      +'「似た者ペア」は、2本だけ言い回しがそっくりで数字や語尾だけ違うやつ。作問側が迷わせにきとる印っちゃ。</div>'
+
+    +'<div class="sec-h" style="margin-top:20px"><h2>③ 1本に決める</h2><span class="eyebrow">基準25%</span></div>'
+    +'<div class="card">'+tipRows(TIPS_1,"緩和語＝原則として・場合がある・ことがある・おそれ")+'</div>'
+
+    +'<div class="sec-h" style="margin-top:20px"><h2>④ 切ってよい言葉</h2><span class="eyebrow">正解である率</span></div>'
+    +'<div class="card">'+tipRows(TIPS_CUT,"低いほど安全に切れる。基準は25%")+'</div>'
+    +'<div class="card" style="margin-top:9px;font-size:12px;line-height:1.9;color:var(--muted)">'
+      +'ただし<b>「誤っているもの」を問う問では逆</b>。切ったらいかん、むしろ本命っちゃ。</div>'
+
+    +'<div class="sec-h" style="margin-top:20px"><h2>⑤ 効かんコツ</h2><span class="eyebrow">よう言われるけど</span></div>'
+    +'<div class="card">'+tipRows(TIPS_NG,"どれも25%前後。当てずっぽうと変わらん")+'</div>'
+
+    +'<p class="foot" style="margin-top:18px">'
+      +'「選択肢だけ」モードで10問解くと、その回でどのコツが当たったかが結果画面に出るっちゃ。<br>'
+      +'本試験では、まず本文を読むこと。これは時間が尽きたときと、見たことない論点に当たったときの逃げ道。'
+    +'</p>';
+}
+
 function startBlind(){
   const list=shuffle(QPOOL.filter(blindOk)).slice(0,BLIND_N);
   G={mode:"blind",blind:true,list,i:0,answered:0,correct:0,combo:0,maxCombo:0,lives:0,coin:0};
@@ -3935,6 +4020,7 @@ document.addEventListener("click",e=>{
   else if(g==="ta") startTa();
   else if(g==="ox") startOx();
   else if(g==="blind") startBlind();
+  else if(g==="tips") renderTips();
   else if(g==="gacha") renderGacha();
   else if(g==="coll") renderColl();
   else if(g==="pq") choosePq();
