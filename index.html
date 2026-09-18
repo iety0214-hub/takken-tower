@@ -70,6 +70,18 @@
 /* 連続日数の一言。切れそうな日だけ赤く */
 .streak-note{font-size:12px;line-height:1.7;color:#CFC6EA;margin:-4px 0 6px;padding:8px 11px;border-radius:10px;background:rgba(255,255,255,.06)}
 .streak-note.warn{color:#FFD5DD;background:rgba(242,73,107,.18);border:1px solid rgba(242,73,107,.35)}
+/* 1日○問で○周 */
+.plan-pace{margin:0 0 10px;padding:12px 13px;border-radius:14px;background:linear-gradient(135deg,rgba(142,107,255,.30),rgba(142,107,255,.10));border:1px solid rgba(142,107,255,.45)}
+.pace-h{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;line-height:1.3}
+.pace-h b{font-size:17px;font-weight:900;color:#FFFFFF}
+.pace-h b em{font-style:normal;font-family:"Chivo Mono",ui-monospace,monospace;font-size:30px;color:#FFE7B0;letter-spacing:-.02em}
+.pace-h span{font-size:12px;color:#CFC6EA}
+.pace-h span b{font-size:12px;color:#FFFFFF}
+.pace-bar{height:8px;border-radius:99px;background:rgba(0,0,0,.28);overflow:hidden;margin-top:9px}
+.pace-bar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#FFB627,#FFE7B0);transition:width .4s ease}
+.pace-f{display:flex;justify-content:space-between;gap:8px;margin-top:6px;font-size:10.5px;color:#CFC6EA;font-family:"Chivo Mono",ui-monospace,monospace}
+.pace-today{margin-top:8px;display:inline-block;font-size:11px;font-weight:700;padding:4px 10px;border-radius:99px;background:rgba(255,255,255,.10);color:#EDE7FA}
+.pace-today.ok{background:#37D399;color:#0E2A22}
 /* きょうの3本 */
 .plan-step.three{padding:12px 13px;flex-wrap:nowrap;align-items:center}
 .plan-step-c{width:28px;height:28px;flex:none;border-radius:50%;display:grid;place-items:center;font-family:"Chivo Mono",ui-monospace,monospace;font-size:12px;font-weight:700;background:rgba(255,255,255,.10);color:#CBBBFF}
@@ -587,6 +599,7 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
           <div class="plan-badge" id="planBadge">◎</div>
         </div>
         <div class="streak-note" id="streakNote"></div>
+        <div class="plan-pace" id="planPace"></div>
         <button class="plan-step three duel" id="planToday">
           <div class="plan-step-c">⚔</div>
           <div class="plan-step-b"><strong>きょうの対戦</strong><span id="planTodayS">全員おなじ10問。正解数と速さで勝負</span></div>
@@ -2252,6 +2265,30 @@ function daysToExam(){
   const t0=new Date(now.getFullYear(),now.getMonth(),now.getDate());
   return Math.round((ex-t0)/86400000);
 }
+/* いま何周目か。全問を k 回正解しとったら k+1 周目。その周で残っとる問数を出す */
+function lapInfo(){
+  const seen=S.seen||{}, total=TOTAL_Q();
+  let minv=Infinity; const vals=QPOOL.map(q=>{ const v=seen[qid(q)]||0; if(v<minv) minv=v; return v; });
+  const lap=minv+1;
+  const done=vals.filter(v=>v>=lap).length;
+  return {lap, done, total, left:total-done};
+}
+/* ホームの目立つところ。「1日○問で○周」 */
+function paceBlock(){
+  const days=daysToExam(), L=lapInfo(), tq=todayQ();
+  if(days<0) return '<div class="pace-h"><b>本試験おつかれ</b></div>';
+  const per = days>0 ? Math.ceil(L.left/days) : L.left;
+  const pct = Math.round(L.done/L.total*100);
+  const lapName = L.lap+"周目";
+  const head = L.left===0
+    ? '<b>'+lapName+' 完走</b><span>全問'+L.lap+'回ずつ正解した。次は'+(L.lap+1)+'周目</span>'
+    : '<b>1日 <em>'+per+'</em>問</b><span>で本試験までに <b>'+lapName+'</b>を回り切る</span>';
+  return '<div class="pace-h">'+head+'</div>'
+    +'<div class="pace-bar"><i style="width:'+pct+'%"></i></div>'
+    +'<div class="pace-f"><span>'+lapName+'　'+L.done.toLocaleString()+' / '+L.total.toLocaleString()+'問（'+pct+'%）</span>'
+    +'<span>あと'+days+'日'+(L.left?'　残り '+L.left.toLocaleString()+'問':'')+'</span></div>'
+    +'<div class="pace-today'+(tq>=per&&per>0?' ok':'')+'">きょう '+tq+' / '+per+'問'+(tq>=per&&per>0?'　ノルマ達成':'')+'</div>';
+}
 /* 未着手の問を残り日数で割る。試験前日までに1周する前提 */
 function paceHtml(){
   const days=daysToExam();
@@ -2987,7 +3024,8 @@ function renderPlan(){
   $("planGap").textContent = p===null ? "あと"+(20-S.answered)+"問で算出"
     : p>=PASS_LINE ? "合格ライン到達" : "合格まで "+(PASS_LINE-p)+"%";
   $("planBar").style.width = (p===null ? 0 : Math.min(100, p/PASS_LINE*100))+"%";
-  $("planCd").innerHTML = paceHtml() + topicHtml();
+  $("planCd").innerHTML = topicHtml();
+  $("planPace").innerHTML = paceBlock();
   const tpBtn=$("planTp"); if(tpBtn) tpBtn.onclick=()=>startTopic(weakTopic().k);
 
   // 連続日数・あと日数・きょう解いた数
@@ -3922,7 +3960,7 @@ function answer(pick){
       if(myRank()>rkBefore){ ensureTitles(); G.rankUp=myRank(); }
     }
     if(!G.blind){                              // 本文を読んどらんけん、解いたことにはせん
-      S.seen=S.seen||{}; S.seen[qid(q)]=1;     // クリア済みとして記録（制覇率はモードを問わん）
+      S.seen=S.seen||{}; S.seen[qid(q)]=(S.seen[qid(q)]||0)+1;   // 正解した回数。1以上でクリア済み、2以上で2周目クリア
       noteHit(q);                              // 復習リストに居ったら1歩前進
       bumpMission("correct",q.cat,1);
       bumpMission("combo",null,G.combo);
