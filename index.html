@@ -76,6 +76,12 @@
 .plan-step.three.done{opacity:.72}
 .plan-step.three.done .plan-step-c{background:#37D399;color:#0E2A22}
 .plan-step.three.done strong{text-decoration:line-through;text-decoration-thickness:2px;text-decoration-color:#37D399}
+.plan-step.three.duel{border-color:rgba(255,182,39,.45);background:linear-gradient(135deg,rgba(255,182,39,.18),rgba(0,0,0,.28))}
+.plan-step.three.duel .plan-step-c{background:rgba(255,182,39,.28);color:#FFE7B0}
+.plan-step.three.duel .plan-step-n{color:#0E2A22;background:#FFB627}
+.plan-step.three.duel.done{opacity:1}
+.plan-step.three.duel.done strong{text-decoration:none}
+.plan-step.three.duel.done .plan-step-n{color:#FFE7B0;background:rgba(255,182,39,.28)}
 .plan-step.three strong{font-size:15px;font-weight:900}
 .plan-step.three .plan-step-b span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .plan-rank{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;margin-top:9px;padding:9px 12px;border-radius:11px;border:1px solid rgba(255,182,39,.35);background:rgba(255,182,39,.10);color:#FFE7B0;font:inherit;font-size:12px;font-weight:700;text-align:left;cursor:pointer}
@@ -502,6 +508,24 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
 .rk.me{border-color:var(--amber);background:linear-gradient(100deg,rgba(124,77,255,.10),var(--surface) 60%)}
 .rk-n{width:34px;flex:none;text-align:center;font-family:"Dela Gothic One",sans-serif;font-size:19px;color:var(--muted);line-height:1.1}
 .rk-mv{display:block;font-family:"Chivo Mono",monospace;font-size:9.5px;font-weight:700;letter-spacing:0;color:var(--muted)}
+/* 表彰台 */
+.podium{display:grid;grid-template-columns:1fr 1.15fr 1fr;gap:6px;align-items:end;margin:4px 0 12px}
+.pd{text-align:center;position:relative}
+.pd-av{width:46px;height:46px;margin:0 auto;border-radius:14px;background:#FFFFFF;border:1.5px solid var(--line-strong);display:grid;place-items:center;font-size:22px;position:relative}
+.pd-av i{position:absolute;top:-16px;left:50%;transform:translateX(-50%);font-style:normal;font-size:18px;animation:bob 1.6s ease-in-out infinite}
+@keyframes bob{50%{transform:translateX(-50%) translateY(-3px)}}
+.pd.p1 .pd-av{width:58px;height:58px;font-size:28px;border-color:#E0A800;box-shadow:0 0 0 4px rgba(224,168,0,.18)}
+.pd.p2 .pd-av{border-color:#8E9BB5} .pd.p3 .pd-av{border-color:#C0793C}
+.pd.me .pd-av{box-shadow:0 0 0 3px rgba(124,77,255,.35)}
+.pd-n{font-size:12px;font-weight:900;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pd-v{font-family:"Chivo Mono",monospace;font-weight:700;font-size:15px;color:var(--amber);line-height:1.2}
+.pd-v small{font-size:9px;color:var(--muted);margin-left:1px}
+.pd-b{margin-top:6px;border-radius:9px 9px 0 0;background:linear-gradient(180deg,#FFFFFF,#FBEBD3);border:1px solid #F0DBBB;border-bottom:0;display:grid;place-items:center;font-family:"Dela Gothic One",sans-serif;font-size:18px;color:var(--muted)}
+.pd.p1 .pd-b{height:54px;color:#E0A800} .pd.p2 .pd-b{height:38px;color:#8E9BB5} .pd.p3 .pd-b{height:28px;color:#C0793C}
+.rk-me-note{margin:0 0 10px;padding:9px 12px;border-radius:11px;background:#FFFFFF;border:1px solid var(--amber);font-size:12px;line-height:1.6;color:var(--ink)}
+.rk-me-note b{color:var(--amber);font-family:"Chivo Mono",monospace}
+.rk-me-note.top{border-color:#E0A800;background:#FFFBEF}
+.rk-gap{display:block;font-style:normal;font-size:10px;color:var(--amber);font-family:"Chivo Mono",monospace;margin-top:2px}
 .rk-mv.up{color:var(--good)} .rk-mv.dn{color:var(--bad)}
 .rkscope{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:12px;background:rgba(255,255,255,.7);border:1px solid #F0DBBB;margin-bottom:11px}
 .rkscope button{font:inherit;font-size:13px;font-weight:900;padding:9px 6px;border-radius:9px;border:0;background:none;color:#8A6D3F;cursor:pointer}
@@ -563,10 +587,10 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
           <div class="plan-badge" id="planBadge">◎</div>
         </div>
         <div class="streak-note" id="streakNote"></div>
-        <button class="plan-step three" id="planToday">
-          <div class="plan-step-c">1</div>
-          <div class="plan-step-b"><strong>きょうの10問</strong><span id="planTodayS">復習・弱点・過去問を混ぜて出す</span></div>
-          <div class="plan-step-n" id="planTodayN">0/10</div>
+        <button class="plan-step three duel" id="planToday">
+          <div class="plan-step-c">⚔</div>
+          <div class="plan-step-b"><strong>きょうの対戦</strong><span id="planTodayS">全員おなじ10問。正解数と速さで勝負</span></div>
+          <div class="plan-step-n" id="planTodayN">挑む</div>
         </button>
         <button class="plan-step three" id="planWeak">
           <div class="plan-step-c">2</div>
@@ -577,11 +601,6 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
           <div class="plan-step-c">3</div>
           <div class="plan-step-b"><strong>肢別○× 20本</strong><span id="planOxS">1肢ずつ○か×か。3分で終わる</span></div>
           <div class="plan-step-n" id="planOxN">0/20</div>
-        </button>
-        <button class="plan-duel" id="planDuel" data-go="duel">
-          <div class="plan-step-c">⚔</div>
-          <div class="plan-step-b"><strong>きょうの対戦</strong><span id="planDuelS">全員おなじ10問。正解数と速さで勝負</span></div>
-          <div class="plan-step-n" id="planDuelN">挑む</div>
         </button>
         <button class="plan-rank hidden" id="planRank" data-go="rank"></button>
         <button class="plan-more" id="planMore">仕上がりをくわしく ▾</button>
@@ -2894,7 +2913,7 @@ function duelOrder(rows){
 async function renderDuel(){
   $("sRes").innerHTML=
     '<div class="sec-h" style="margin-top:18px"><h2>⚔ きょうの対戦</h2><span class="eyebrow">'+today()+'</span></div>'
-    +'<p style="font-size:12px;color:var(--muted);margin:0 0 12px;line-height:1.7">全員おなじ10問。正解数が同じなら速いほうが上。日付が変わったら次の10問っちゃ。</p>'
+    +'<p style="font-size:12px;color:var(--muted);margin:0 0 12px;line-height:1.7">全員おなじ10問（ステージの問題から）。正解数が同じなら速いほうが上。解いた分は正答率にも入る。日付が変わったら次の10問っちゃ。</p>'
     +'<div id="duelList"><div class="duel-row" style="justify-content:center;color:var(--muted);font-size:12.5px">読み込み中…</div></div>'
     +'<div class="stack">'
       +(duelDone()?'':'<button class="btn btn-p" id="duelGo">⚔ 挑む（10問）</button>')
@@ -2995,9 +3014,15 @@ function renderPlan(){
     el.querySelector(".plan-step-b span").textContent = sub;
     el.querySelector(".plan-step-n").textContent = n;
   };
-  const b=buildToday(), d1=tq>=TODAY_N;
-  step("planToday", d1, d1 ? "済み　もう1セットやってもよか" : todayLabel(b), Math.min(tq,TODAY_N)+"/"+TODAY_N);
-  $("planToday").onclick = startToday;
+  const dd=duelOf({own:S.own}), d1=!!dd;
+  if(dd){
+    const o=TEAM ? duelOrder(TEAM) : null;
+    const pos=o ? o.findIndex(p=>p.name===ME)+1 : 0;
+    step("planToday", true, dd.c+" / "+dd.t+"　"+mmss(dd.sec||0)+(pos?"　いま"+pos+"位":"")+"　結果を見る", "済み");
+  }else{
+    step("planToday", false, "全員おなじ10問。正解数と速さで勝負", "挑む");
+  }
+  $("planToday").onclick = startDuel;
 
   const w=weakTopic(), wq=S.plan.w||0, d2=wq>=WEAK_N;
   $("planWeakT").textContent = "弱点 "+weakName()+" "+WEAK_N+"問";
@@ -3017,18 +3042,6 @@ function renderPlan(){
     celebrate({icon:"✅", color:"var(--good)", eyebrow:"DAILY 3", title:"きょうの3本 コンプリート", sub:"明日も同じでよか。連続 "+Math.max(1,sn)+"日目"});
   }
 
-  /* きょうの対戦 */
-  const dd=duelOf({own:S.own}), pd=$("planDuel");
-  pd.classList.toggle("done", !!dd);
-  if(dd){
-    const o=TEAM ? duelOrder(TEAM) : null;
-    const pos=o ? o.findIndex(p=>p.name===ME)+1 : 0;
-    $("planDuelS").textContent = dd.c+" / "+dd.t+"　"+mmss(dd.sec||0)+(pos?"　いま"+pos+"位":"")+"　結果を見る";
-    $("planDuelN").textContent = "済み";
-  }else{
-    $("planDuelS").textContent = "全員おなじ10問。正解数と速さで勝負";
-    $("planDuelN").textContent = "挑む";
-  }
   /* 今週の順位を一言で。順位表を開かんでも競っとる感じが出る */
   const wp=myWeekPos(), pr=$("planRank");
   if(wp && wp.n>=2){
@@ -4007,7 +4020,12 @@ function finish(){
     taTk=rollTier(myRank()); S.tk[taTk]++;
   }
   if(G.duel && G.answered>0 && !duelDone()){
-    meta().duel={d:today(),c:G.correct,t:G.answered,sec:Math.max(1,Math.round((Date.now()-(G.t0||Date.now()))/1000))};
+    const m=meta();
+    m.duel={d:today(),c:G.correct,t:G.answered,sec:Math.max(1,Math.round((Date.now()-(G.t0||Date.now()))/1000))};
+    /* 順位表の「⚔対戦」軸。今週の合計正解と、通算の合計正解 */
+    if(!m.duelWk || m.duelWk.k!==weekKey()) m.duelWk={k:weekKey(),c:0,n:0};
+    m.duelWk.c+=G.correct; m.duelWk.n++;
+    m.duelAll=m.duelAll||{c:0,n:0}; m.duelAll.c+=G.correct; m.duelAll.n++;
   }
   addCoin(G.coin+bonusCoin);
   const ups=!!G.rankUp;
@@ -4509,8 +4527,15 @@ function rowStreak(r){
 const RK_KEYS=[
   {k:"total_correct",n:"正解数",  u:"問", byCat:true},
   {k:"rate",         n:"正答率",  u:"%",  byCat:true},
+  {k:"duel",         n:"⚔対戦",   u:"問"},
   {k:"streak",       n:"🔥連続",  u:"日"}
 ];
+/* 対戦の合計正解。今週ぶんと通算ぶん */
+function duelPts(r){
+  const m=(((r||{}).own||{}).meta)||{};
+  if(rkScope==="week"){ const w=m.duelWk; return (w && w.k===weekKey()) ? w : {c:0,n:0}; }
+  return m.duelAll||{c:0,n:0};
+}
 let rkKey="total_correct", rkCat="all", rkScope="week";   // week: 月曜11時からの正解数で競う
 const RK_SNAP = ()=> "takken-tower-rksnap:"+ME;
 /* 前に見たときからの順位の動き。日付が変わるごとに前回の並びを取っておいて比べる */
@@ -4539,6 +4564,7 @@ function rkValue(r,key,cat){
     return key==="rate" ? (w.t ? Math.round(w.c/w.t*100) : 0) : key==="total_correct" ? w.c : w.t;
   }
   switch(key){
+    case "duel":         return duelPts(r).c;
     case "streak":       return rowStreak(r);
     case "rank":         return rankOf(r.total_correct||sum("c"));
     case "best_ta":      return r.best_ta||0;
@@ -4617,16 +4643,40 @@ async function renderRank(){
   const fmt=def.fmt||(v=>v);
   const mv=rkMoves(order);
 
-  $("rkList").innerHTML=order.map((r,i)=>{
-    const p=PLAYERS.find(x=>x.name===r.name)||{av:"👤"};
-    const rate=rkValue(r,"rate","all");
+  const avOf=n=>(PLAYERS.find(x=>x.name===n)||{av:"👤"}).av;
+  /* 表彰台。3人以上おるときだけ。2位・1位・3位の並びで真ん中が高い */
+  let podium='';
+  if(order.length>=3 && val(order[0])>0){
+    const slot=(r,i)=>'<div class="pd p'+(i+1)+(r.name===ME?' me':'')+'">'
+      +'<div class="pd-av">'+avOf(r.name)+(i===0?'<i>👑</i>':'')+'</div>'
+      +'<div class="pd-n">'+r.name+'</div>'
+      +'<div class="pd-v">'+fmt(val(r))+'<small>'+def.u+'</small></div>'
+      +'<div class="pd-b"><span>'+(i+1)+'</span></div></div>';
+    podium='<div class="podium">'+slot(order[1],1)+slot(order[0],0)+slot(order[2],2)+'</div>';
+  }
+  /* 自分の位置の一言。上の人まであと何問か */
+  const mi=order.findIndex(r=>r.name===ME);
+  let meNote='';
+  if(mi>0){
+    const gap=val(order[mi-1])-val(order[mi]);
+    meNote='<div class="rk-me-note">🎯 '+(mi)+'位の'+order[mi-1].name+'まで <b>あと'+(gap+1)+def.u+'</b>'
+      +(mi>1 ? '　／　1位まで あと'+(val(order[0])-val(order[mi])+1)+def.u : '')+'</div>';
+  }else if(mi===0 && order.length>1){
+    const lead=val(order[0])-val(order[1]);
+    meNote='<div class="rk-me-note top">👑 いま1位　2位の'+order[1].name+'と <b>'+lead+def.u+'差</b>'+(lead<=3?'　油断すると抜かれるっちゃ':'')+'</div>';
+  }
+
+  $("rkList").innerHTML=podium+meNote+order.map((r,i)=>{
     const d=mv[r.name];
     const arrow = d==null ? '' : d>0 ? '<i class="rk-mv up">↑'+d+'</i>' : d<0 ? '<i class="rk-mv dn">↓'+(-d)+'</i>' : '<i class="rk-mv">→</i>';
+    const up = i>0 ? (val(order[i-1])-val(order[i])+1) : 0;
+    const dp=duelPts(r);
     return '<div class="rk'+(r.name===ME?' me':'')+' p'+(i+1)+'">'
       +'<div class="rk-n">'+(i+1)+arrow+'</div>'
-      +'<div class="rk-ic">'+p.av+'</div>'
-      +'<div class="rk-b"><strong>'+r.name+(r.name===ME?' <span style="font-size:10px;color:var(--amber)">じぶん</span>':'')+'</strong>'
-        +'<span>'+(rkScope==="week" ? '今週 '+wkOf(r).c+'/'+wkOf(r).t+'問　' : '')+titleAt(rkValue(r,"rank","all")).n+'　通算 '+(r.total_correct||0)+'問 '+(r.total_answered?Math.round((r.total_correct||0)/r.total_answered*100):0)+'%　'+(rowStreak(r)?'🔥'+rowStreak(r)+'日':'')+'</span></div>'
+      +'<div class="rk-ic">'+avOf(r.name)+'</div>'
+      +'<div class="rk-b"><strong>'+(i===0?'👑 ':'')+r.name+(r.name===ME?' <span style="font-size:10px;color:var(--amber)">じぶん</span>':'')+'</strong>'
+        +'<span>'+(rkScope==="week" ? '今週 '+wkOf(r).c+'/'+wkOf(r).t+'問　' : '')+'⚔'+dp.c+'　'+titleAt(rkValue(r,"rank","all")).n+'　'+(rowStreak(r)?'🔥'+rowStreak(r)+'日':'')+'</span>'
+        +(i>0 && rkKey!=="rate" ? '<em class="rk-gap">上まで あと'+up+def.u+'</em>':'')+'</div>'
       +'<div class="rk-v"><b style="font-size:'+(def.fmt?"14px":"19px")+'">'+fmt(val(r))+'</b><span>'+def.u+'</span></div>'
       +'<div class="rk-bar" style="width:'+(val(r)/top*100)+'%"></div>'
     +'</div>';
