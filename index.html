@@ -154,6 +154,7 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
 .city{position:relative;margin:6px -16px 0;height:230px}
 .city canvas{display:block;width:100%;height:100%}
 .city-cap{position:absolute;left:16px;bottom:12px;right:16px;display:flex;align-items:flex-end;justify-content:space-between;gap:10px;text-shadow:0 1px 12px rgba(255,255,255,.9)}
+.city-adm{position:absolute;top:8px;right:16px;z-index:2;padding:9px 14px;border-radius:999px;border:1px solid var(--amber);background:var(--surface);color:var(--ink);font-size:13px;font-weight:900;box-shadow:0 4px 14px rgba(0,0,0,.18)}
 .city-title{font-size:20px}
 .city-sub{font-size:11px;color:#A9B6D2;letter-spacing:.06em}
 
@@ -441,6 +442,7 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
   <!-- ══ ホーム ══ -->
   <section id="sHome">
     <div class="city"><canvas id="cv"></canvas>
+      <button class="city-adm" data-go="admin" id="lnkAdmin" hidden>👀 みんなの進捗</button>
       <div class="city-cap">
         <div>
           <div class="dsp city-title">宅建タワー</div>
@@ -494,7 +496,6 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
         <button data-go="coll">🗂 コレクション</button>
         <button data-go="log">📈 記録</button>
         <button data-go="tips">🧠 コツ</button>
-        <button data-go="admin" id="lnkAdmin" hidden>👀 みんなの進捗</button>
       </div>
     </div>
 
@@ -581,7 +582,7 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
       <div id="rkList"></div>
     </div>
     <div class="sec" style="margin-top:22px">
-      <div class="sec-h"><h2>科目別の正答率</h2><span class="eyebrow">4人ぶん・単位 %</span></div>
+      <div class="sec-h"><h2>科目別の正答率</h2><span class="eyebrow" id="rkChartNote">単位 %</span></div>
       <div class="card">
         <div class="legend" id="rkLegend"></div>
         <div class="chartwrap"><svg id="rkChart" viewBox="0 0 340 190" role="img" aria-label="科目ごとの正答率の比較"></svg></div>
@@ -2166,19 +2167,61 @@ const DUP_COIN = {N:30,R:80,SR:200,UR:600};
 /* ══════════════════════════════════════════════════════
    セーブデータ
    ══════════════════════════════════════════════════════ */
-/* 4人固定のメンバー。名前は Supabase の主キーと一致させること */
-const PLAYERS=[
+/* 最初からおる4人。名前は Supabase の主キーと一致させること */
+const FIXED=[
   {name:"髙田",   av:"🧭"},
   {name:"長谷川", av:"🔧"},
   {name:"佐藤",   av:"📎"},
   {name:"川合",   av:"🧩"}
 ];
+/* あとから増やした人（2026-09-17〜）。Supabaseの行に own.meta.extra を立てて見分ける。
+   増やした人も順位表・科目別グラフ・管理者ビュー・週間タイムアタックに入る。
+   サーバの行が取れる前でも名前を出せるよう、端末にも控えを持っとく */
+const EXTRA_KEY="takken-tower-extras";
+let EXTRA=[];
+let PLAYERS=FIXED.slice();
+const AV_POOL=["🦊","🐧","🐣","🦉","🐝","🐬","🌱","⭐","🎈","🍀","🧊","🍊"];
+function avatarFor(n){ let h=0; for(let i=0;i<n.length;i++) h=(h*31+n.charCodeAt(i))>>>0; return AV_POOL[h%AV_POOL.length]; }
+function rebuildPlayers(){ PLAYERS=FIXED.concat(EXTRA); }
+function loadExtras(){
+  try{ EXTRA=JSON.parse(localStorage.getItem(EXTRA_KEY)||"[]")||[]; }catch(e){ EXTRA=[]; }
+  rebuildPlayers();
+}
+function saveExtras(){ try{ localStorage.setItem(EXTRA_KEY,JSON.stringify(EXTRA)); }catch(e){} }
+/* サーバから来た行で増やした人の一覧を作り直す */
+function extrasFromRows(rows){
+  if(!rows) return;
+  EXTRA=rows.filter(r=>(((r.own||{}).meta||{}).extra)
+      && r.name!==ADMIN.name && !FIXED.some(f=>f.name===r.name))
+    .map(r=>({name:r.name, av:avatarFor(r.name)}))
+    .sort((a,b)=>a.name.localeCompare(b.name,"ja"));
+  saveExtras(); rebuildPlayers();
+}
+/* 人を増やす。Supabaseは名前が主キーで、新しい行は成績ゼロでしか作れんようにしてある */
+async function addPlayer(raw){
+  const name=(raw||"").trim();
+  if(!name) return toast("名前を入れてっちゃ");
+  if(name.length>12) return toast("名前は12文字までっちゃ");
+  if(name===ADMIN.name || PLAYERS.some(p=>p.name===name)) return toast("その名前はもうおるっちゃ");
+  if(!confirm("「"+name+"」で増やしてよか？　あとから名前は変えられんっちゃ。")) return;
+  try{
+    await sb(SB_TBL,{method:"POST",headers:{Prefer:"return=minimal"},
+      body:JSON.stringify({name:name, own:{meta:{extra:true}}, coin:0, total_correct:0, total_answered:0, best_ta:0})});
+  }catch(e){
+    return toast(String(e).indexOf("409")>=0 ? "その名前はもう使われとる" : "増やせんかった。ネットを確かめてっちゃ");
+  }
+  EXTRA.push({name:name, av:avatarFor(name)}); saveExtras(); rebuildPlayers();
+  ME=name; try{ localStorage.setItem(ME_KEY,ME); }catch(e){}
+  load(); ensureDaily(); ensureDay(); renderHome();
+  toast(name+" を増やしたっちゃ");
+  pullMe().then(drawWeek);
+}
 /* 家原も解ける（2026-09-10〜）。成績はSupabaseの自分の行に保存される。
    ただし PLAYERS に入れとらんけん、順位表と科目別グラフと管理者ビューには出ん。
    ホームの「👀 みんなの進捗」から4人の進捗を見られるのは家原だけ */
 const ADMIN = {name:"家原", av:"👀"};
 const isAdmin = ()=> ME === ADMIN.name;
-/* サーバから来た行のうち、順位を競う4人ぶんだけ。家原の行を混ぜんため */
+/* サーバから来た行のうち、順位を競う人ぶんだけ（最初の4人＋増やした人）。家原の行を混ぜんため */
 const teamRows = rows => (rows||[]).filter(r=>PLAYERS.some(p=>p.name===r.name));
 const ME_KEY="takken-tower-me";
 const KEY_OF = n => "takken-tower-v2:"+n;
@@ -2217,7 +2260,7 @@ const SB_URL="https://zrqdoorolwvjlwuatlkc.supabase.co";
 const SB_KEY="sb_publishable_qTfps32ER4iHTo_o3zkCEw_HlJdMq_c";
 const SB_TBL="axia_takken_players";
 let sbOk=null;               // null=未接続 true=疎通 false=不通
-let TEAM=null;               // 4人ぶんの行。みんなの平均に使う
+let TEAM=null;               // 順位を競う人ぶんの行。みんなの平均に使う
 async function sb(path,opt){
   opt=opt||{};
   const o=Object.assign({},opt);   // headers は必ず後から上書きする（apikey が消えるため）
@@ -2257,8 +2300,10 @@ async function adminReset(name){
   if(ME===name){ try{ localStorage.removeItem(KEY_OF(name)); }catch(e){} }
   return name+" をリセットした";
 }
+/* 行を取ってきたら、増やした人の一覧もそのたび作り直す。
+   順位表・管理者ビュー・自分の同期のどこから呼ばれても同じになるよう、ここでまとめてやる */
 async function pullAll(){
-  try{ const rows=await sb(SB_TBL+"?select=*"); sbOk=true; return rows; }
+  try{ const rows=await sb(SB_TBL+"?select=*"); sbOk=true; extrasFromRows(rows); return rows; }
   catch(e){ sbOk=false; return null; }
 }
 /* 起動時、サーバ側が進んでいればそちらを採用する（別端末で解いた分を拾う） */
@@ -3921,7 +3966,7 @@ function renderPick(first){
      +'<div class="eyebrow">'+(first?"WHO ARE YOU":"SWITCH PLAYER")+'</div>'
      +'<div class="dsp" style="font-size:21px;margin:6px 0 4px">誰が解く？</div>'
      +'<p style="font-size:12px;color:var(--muted);margin:0 0 16px;line-height:1.7">'
-       +'成績はこの4人で共有されて、順位表に出るっちゃ。あとからHUDの名前をタップすれば切り替えられる。</p>'
+       +'成績は順位表で共有されるっちゃ。あとからHUDの名前をタップすれば切り替えられる。</p>'
      +'<div class="pick">'+PLAYERS.map(p=>
         '<button data-me="'+p.name+'"><span class="av">'+p.av+'</span>'+p.name+'</button>').join("")+'</div>'
      +'<div style="margin-top:14px;padding-top:13px;border-top:1px dashed var(--line)">'
@@ -3929,11 +3974,28 @@ function renderPick(first){
        +'<div class="pick"><button data-me="'+ADMIN.name+'"><span class="av">'+ADMIN.av+'</span>'+ADMIN.name+'</button></div>'
        +'<p style="font-size:11px;color:var(--muted);margin:9px 0 0;line-height:1.7">'
          +'解けるし、成績も残る。ただし<b>順位表には出ん</b>。'
-         +'ホームの「👀 みんなの進捗」から4人の進み具合を見られるっちゃ。</p>'
+         +'ホームの「👀 みんなの進捗」からみんなの進み具合を見られるっちゃ。</p>'
+     +'</div>'
+     +'<div style="margin-top:14px;padding-top:13px;border-top:1px dashed var(--line)">'
+       +'<div class="eyebrow" style="margin-bottom:7px">人を増やす</div>'
+       +'<div style="display:flex;gap:8px;align-items:stretch">'
+         +'<input id="pkName" maxlength="12" placeholder="名前（12文字まで）" '
+           +'style="flex:1;min-width:0;padding:11px 12px;border-radius:11px;border:1px solid var(--line);'
+           +'background:var(--surface);font-size:14px;color:var(--ink);font-family:inherit">'
+         +'<button class="btn btn-p" id="pkAdd" style="width:auto;padding:0 20px;margin:0">追加</button>'
+       +'</div>'
+       +'<p style="font-size:11px;color:var(--muted);margin:9px 0 0;line-height:1.7">'
+         +'増やした人も<b>順位表に出る</b>。増やしたらそのまま その人で始まるっちゃ。'
+         +'<b>あとから名前は変えられん</b>けん気をつけて。</p>'
      +'</div>'
     +'</div>'
     +(first?'':'<div class="stack"><button class="btn btn-g" data-go="home">やめる</button></div>');
   show("sRes");
+  const inp=$("pkName"), add=$("pkAdd");
+  if(add){
+    add.addEventListener("click",()=>addPlayer(inp.value));
+    inp.addEventListener("keydown",e=>{ if(e.key==="Enter") addPlayer(inp.value); });
+  }
   $("sRes").querySelectorAll("[data-me]").forEach(b=>b.addEventListener("click",()=>{
     ME=b.dataset.me;
     try{ localStorage.setItem(ME_KEY,ME); }catch(e){}
@@ -4052,12 +4114,15 @@ async function renderRank(){
 }
 
 /* 科目ごとの正答率を4人ならべて比べる */
-const PCOL=["#7C4DFF","#22C3A6","#F2994A","#EB5A8C"];
+const PCOL_BASE=["#7C4DFF","#22C3A6","#F2994A","#EB5A8C"];
+/* 5人目からは色を作って割り当てる */
+const pcol=i=> i<PCOL_BASE.length ? PCOL_BASE[i] : "hsl("+((i*67)%360)+",68%,55%)";
 function drawRkChart(order){
   const svg=$("rkChart"); if(!svg) return;
   const people=PLAYERS.map(p=>order.find(r=>r.name===p.name)||{name:p.name,stats:{}});
+  const cn=$("rkChartNote"); if(cn) cn.textContent=people.length+"人ぶん・単位 %";
   $("rkLegend").innerHTML=people.map((r,i)=>
-    '<span><i style="background:'+PCOL[i]+'"></i>'+r.name+'</span>').join("");
+    '<span><i style="background:'+pcol(i)+'"></i>'+r.name+'</span>').join("");
 
   const cats=Object.keys(CATS);
   const W=340,H=190,L=30,R=6,T=10,B=30, iw=W-L-R, ih=H-T-B;
@@ -4068,14 +4133,15 @@ function drawRkChart(order){
     g+='<line x1="'+L+'" y1="'+yy+'" x2="'+(W-R)+'" y2="'+yy+'" stroke="var(--line)" stroke-width="1"/>'
       +'<text x="'+(L-5)+'" y="'+(yy+3.5)+'" text-anchor="end" font-size="8" fill="var(--muted)" font-family="Chivo Mono,monospace">'+v+'</text>';
   }
-  const gw=iw/cats.length, bar=Math.min(11,(gw-10)/4);
+  const np=Math.max(1,people.length);
+  const gw=iw/cats.length, bar=Math.max(2.4,Math.min(11,(gw-8)/np));
   cats.forEach((c,ci)=>{
-    const x0=L+gw*ci+(gw-bar*4)/2;
+    const x0=L+gw*ci+(gw-bar*np)/2;
     people.forEach((r,pi)=>{
       const st=(r.stats||{})[c]||{c:0,t:0};
       const v=st.t?Math.round(st.c/st.t*100):0;
       const yy=y(v), h=Math.max(v?1.5:0,T+ih-yy);
-      g+='<rect x="'+(x0+bar*pi)+'" y="'+yy+'" width="'+(bar-1.5)+'" height="'+h+'" rx="2" fill="'+PCOL[pi]+'"/>';
+      g+='<rect x="'+(x0+bar*pi)+'" y="'+yy+'" width="'+Math.max(1.2,bar-1.5)+'" height="'+h+'" rx="2" fill="'+pcol(pi)+'"/>';
     });
     g+='<text x="'+(L+gw*ci+gw/2)+'" y="'+(H-14)+'" text-anchor="middle" font-size="8.5" fill="'+CATS[c].c+'">'+CATS[c].name+'</text>';
   });
@@ -4112,6 +4178,7 @@ $("qQuit").addEventListener("click",()=>{
 });
 
 function boot(){
+  loadExtras();
   try{ ME=localStorage.getItem(ME_KEY); }catch(e){}
   if(!PLAYERS.some(p=>p.name===ME) && ME!==ADMIN.name) ME=null;
   if(!ME){ startClock(); renderPick(true); return; }
