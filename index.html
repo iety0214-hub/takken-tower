@@ -2265,10 +2265,11 @@ function daysToExam(){
   const t0=new Date(now.getFullYear(),now.getMonth(),now.getDate());
   return Math.round((ex-t0)/86400000);
 }
-/* いま何周目か。全問を k 回正解しとったら k+1 周目。その周で残っとる問数を出す */
+/* いま何周目か。「やった回数」（正誤は問わん）で数えて、全問 k 回やっとったら k+1 周目。
+   own.meta.tried に回数を持つ。昔の版で解いた分は seen（正解の記録）しか無いけん、そっちも回数として拾う */
 function lapInfo(){
-  const seen=S.seen||{}, total=TOTAL_Q();
-  let minv=Infinity; const vals=QPOOL.map(q=>{ const v=seen[qid(q)]||0; if(v<minv) minv=v; return v; });
+  const seen=S.seen||{}, tried=(meta().tried)||{}, total=TOTAL_Q();
+  let minv=Infinity; const vals=QPOOL.map(q=>{ const id=qid(q); const v=Math.max(tried[id]||0, seen[id]||0); if(v<minv) minv=v; return v; });
   const lap=minv+1;
   const done=vals.filter(v=>v>=lap).length;
   return {lap, done, total, left:total-done};
@@ -3939,6 +3940,8 @@ function answer(pick){
      タイムアタックは自己ベスト、鬼レベル模試は最高点、肢別○×は通算を別枠で持つ */
   const rec = G.mode==="stage";
   if(rec){ S.stats[q.cat].t++; S.answered++; tpStat(q).t++; }
+  /* 周回は「やった問題数」で数える。正誤は問わん。本文を伏せた選択肢だけモードは入れん */
+  if(!G.blind){ const m=meta(); m.tried=m.tried||{}; m.tried[qid(q)]=(m.tried[qid(q)]||0)+1; }
   bumpStreak();
   ensurePlan();
   if(G.mode==="stage"){ if(G.drill) S.plan.s2++; else if(!G.review) S.plan.s1++; if(G.weak) S.plan.w=(S.plan.w||0)+1; }
