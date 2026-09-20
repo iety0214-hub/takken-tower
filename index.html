@@ -242,9 +242,9 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
 .city-cap{position:absolute;left:16px;bottom:12px;right:16px;display:flex;align-items:flex-end;justify-content:space-between;gap:10px;text-shadow:0 1px 12px rgba(255,255,255,.9)}
 /* 街の上の円と球（AXIA JAPAN のトップと同じ作り）。
    ゆっくり回りながら、ページを下げると寄ってきて大きく回る */
-.hero-ring{position:absolute;z-index:1;right:-64px;top:46%;width:min(62vw,300px);aspect-ratio:1/1;
+.hero-ring{position:absolute;z-index:1;right:-42px;top:52%;width:min(42vw,190px);aspect-ratio:1/1;
   pointer-events:none;
-  transform:translate3d(calc(var(--hp,0) * -120px), calc(-50% + var(--hp,0) * 60px), 0)
+  transform:translate3d(calc(var(--hp,0) * -80px), calc(-50% + var(--hp,0) * 44px), 0)
             scale(calc(1 + var(--hp,0) * .18))}
 .hero-ring-in{position:absolute;inset:0;border:1.5px solid rgba(124,77,255,.38);border-radius:50%;
   box-shadow:0 0 0 1px rgba(255,255,255,.35) inset;
@@ -253,8 +253,8 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
   border:1px solid rgba(124,77,255,.24);border-radius:50%}
 .hero-ring-in::before{inset:15%} .hero-ring-in::after{inset:34%}
 @keyframes heroSpin{100%{transform:rotate(calc(var(--hp,0) * 280deg + 360deg))}}
-.hero-dot{position:absolute;left:15%;top:26%;width:9px;height:9px;border-radius:50%;
-  background:var(--amber);box-shadow:0 0 0 8px rgba(124,77,255,.14),0 0 16px 3px rgba(124,77,255,.55)}
+.hero-dot{position:absolute;left:15%;top:26%;width:8px;height:8px;border-radius:50%;
+  background:var(--amber);box-shadow:0 0 0 6px rgba(124,77,255,.14),0 0 14px 3px rgba(124,77,255,.5)}
 @media (prefers-reduced-motion:reduce){.hero-ring-in{animation:none}}
 .city-adm{position:absolute;top:8px;right:16px;z-index:2;padding:9px 14px;border-radius:999px;border:1px solid var(--amber);background:var(--surface);color:var(--ink);font-size:13px;font-weight:900;box-shadow:0 4px 14px rgba(0,0,0,.18)}
 .city-title{font-size:20px}
@@ -601,7 +601,8 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
 @keyframes ldrSweep{0%{transform:translateY(-180px) rotate(-8deg);opacity:0}
   30%,70%{opacity:1}100%{transform:translateY(180px) rotate(-8deg);opacity:0}}
 .ldr-center{position:relative;z-index:2;width:min(420px,100% - 52px);text-align:center}
-.ldr-logo{position:relative;width:min(260px,72vw);margin:0 auto 24px;padding:12px 18px;
+.ldr-bot{position:absolute;top:100%;left:0;right:0;margin-top:22px}
+.ldr-logo{position:relative;width:min(260px,72vw);margin:0 auto;padding:12px 18px;
   opacity:0;transform:translate3d(0,24px,0) scale(.94);
   animation:ldrIn .9s cubic-bezier(.2,.75,.2,1) .12s 1 forwards}
 .ldr-logo::before,.ldr-logo::after{content:"";position:absolute;top:50%;width:46px;height:1px;
@@ -610,7 +611,7 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
 .ldr-logo b{font-family:"Dela Gothic One","Zen Kaku Gothic New",sans-serif;font-weight:400;
   font-size:27px;letter-spacing:.04em;display:block;text-shadow:0 8px 30px rgba(0,0,0,.35)}
 @keyframes ldrIn{100%{opacity:1;transform:none}}
-.ldr-sub{margin-bottom:26px;color:rgba(255,255,255,.46);font-family:"Chivo Mono",monospace;
+.ldr-sub{margin-bottom:22px;color:rgba(255,255,255,.46);font-family:"Chivo Mono",monospace;
   font-size:8.5px;letter-spacing:.25em}
 .ldr-prog{display:flex;align-items:center;gap:16px}
 .ldr-bar{position:relative;flex:1;height:1px;overflow:hidden;background:rgba(255,255,255,.18)}
@@ -626,8 +627,10 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
   <div class="ldr-sweep"></div>
   <div class="ldr-center">
     <div class="ldr-logo"><b>宅建タワー</b></div>
-    <div class="ldr-sub">TAKKEN TOWER</div>
-    <div class="ldr-prog"><div class="ldr-bar"><i id="ldrBar"></i></div><div class="ldr-num" id="ldrNum">0</div></div>
+    <div class="ldr-bot">
+      <div class="ldr-sub">TAKKEN TOWER</div>
+      <div class="ldr-prog"><div class="ldr-bar"><i id="ldrBar"></i></div><div class="ldr-num" id="ldrNum">0</div></div>
+    </div>
   </div>
 </div>
 
