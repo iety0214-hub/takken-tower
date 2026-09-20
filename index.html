@@ -237,7 +237,7 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
 .xpbar>i{display:block;height:100%;background:linear-gradient(90deg,var(--amber),#A57BFF);transition:width .5s cubic-bezier(.2,.8,.2,1)}
 
 /* ── 街 ─────────────────────────────────────────────── */
-.city{position:relative;margin:6px -16px 0;height:230px}
+.city{position:relative;margin:6px -16px 0;height:230px;overflow:hidden}
 .city canvas{display:block;width:100%;height:100%}
 .city-cap{position:absolute;left:16px;bottom:12px;right:16px;display:flex;align-items:flex-end;justify-content:space-between;gap:10px;text-shadow:0 1px 12px rgba(255,255,255,.9)}
 /* 街の上の円と球（AXIA JAPAN のトップと同じ作り）。
@@ -584,6 +584,7 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
   transform:translateY(0);transition:transform .92s cubic-bezier(.76,0,.24,1)}
 .ldr.go{transform:translateY(-101%)}
 .ldr.off{visibility:hidden;pointer-events:none}
+.ldr-bg{position:absolute;inset:0;overflow:hidden;pointer-events:none}
 .ldr-grid{position:absolute;inset:-140px;
   background:linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px) 0 0/72px 72px,
              linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px) 0 0/72px 72px;
@@ -622,9 +623,11 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
 </style>
 
 <div class="ldr" id="ldr" aria-hidden="true">
-  <div class="ldr-grid"></div>
-  <div class="ldr-ring"></div>
-  <div class="ldr-sweep"></div>
+  <div class="ldr-bg">
+    <div class="ldr-grid"></div>
+    <div class="ldr-ring"></div>
+    <div class="ldr-sweep"></div>
+  </div>
   <div class="ldr-center">
     <div class="ldr-logo"><b>宅建タワー</b></div>
     <div class="ldr-bot">
