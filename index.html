@@ -562,7 +562,58 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
 .foot{margin-top:34px;font-size:10.5px;color:var(--muted);line-height:1.85;border-top:1px solid var(--line);padding-top:14px}
 .hidden{display:none!important}
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+/* ── 起動画面（AXIA JAPAN のトップと同じ作り：同心円が回り、方眼が流れ、光の線が横切る） ── */
+.ldr{position:fixed;inset:0;z-index:999;display:grid;place-items:center;overflow:hidden;
+  background:linear-gradient(160deg,#2A1F45,#120C24);color:#FFFFFF;
+  transform:translateY(0);transition:transform .92s cubic-bezier(.76,0,.24,1)}
+.ldr.go{transform:translateY(-101%)}
+.ldr.off{visibility:hidden;pointer-events:none}
+.ldr-grid{position:absolute;inset:-140px;
+  background:linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px) 0 0/72px 72px,
+             linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px) 0 0/72px 72px;
+  animation:ldrGrid 7s linear infinite}
+@keyframes ldrGrid{100%{transform:translate3d(72px,72px,0)}}
+.ldr-ring{position:absolute;left:50%;top:50%;width:min(78vw,430px);aspect-ratio:1/1;
+  border:1px solid rgba(255,255,255,.13);border-radius:50%;transform:translate(-50%,-50%);
+  animation:ldrRing 17s linear infinite}
+.ldr-ring::before,.ldr-ring::after{content:"";position:absolute;border:1px solid rgba(255,255,255,.08);border-radius:50%}
+.ldr-ring::before{inset:17%} .ldr-ring::after{inset:34%}
+@keyframes ldrRing{100%{transform:translate(-50%,-50%) rotate(360deg)}}
+.ldr-sweep{position:absolute;left:-20%;top:50%;width:140%;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,182,39,.45),transparent);
+  transform:rotate(-8deg);animation:ldrSweep 2.4s ease-in-out infinite}
+@keyframes ldrSweep{0%{transform:translateY(-180px) rotate(-8deg);opacity:0}
+  30%,70%{opacity:1}100%{transform:translateY(180px) rotate(-8deg);opacity:0}}
+.ldr-center{position:relative;z-index:2;width:min(420px,100% - 52px);text-align:center}
+.ldr-logo{position:relative;width:min(260px,72vw);margin:0 auto 24px;padding:12px 18px;
+  opacity:0;transform:translate3d(0,24px,0) scale(.94);
+  animation:ldrIn .9s cubic-bezier(.2,.75,.2,1) .12s 1 forwards}
+.ldr-logo::before,.ldr-logo::after{content:"";position:absolute;top:50%;width:46px;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.5))}
+.ldr-logo::before{right:100%} .ldr-logo::after{left:100%;transform:scaleX(-1)}
+.ldr-logo b{font-family:"Dela Gothic One","Zen Kaku Gothic New",sans-serif;font-weight:400;
+  font-size:27px;letter-spacing:.04em;display:block;text-shadow:0 8px 30px rgba(0,0,0,.35)}
+@keyframes ldrIn{100%{opacity:1;transform:none}}
+.ldr-sub{margin-bottom:26px;color:rgba(255,255,255,.46);font-family:"Chivo Mono",monospace;
+  font-size:8.5px;letter-spacing:.25em}
+.ldr-prog{display:flex;align-items:center;gap:16px}
+.ldr-bar{position:relative;flex:1;height:1px;overflow:hidden;background:rgba(255,255,255,.18)}
+.ldr-bar i{position:absolute;inset:0;display:block;background:#FFFFFF;transform:scaleX(0);
+  transform-origin:left center;transition:transform .12s linear}
+.ldr-num{width:34px;text-align:right;font-family:"Chivo Mono",monospace;font-size:9px;letter-spacing:.08em}
+@media (prefers-reduced-motion:reduce){.ldr-grid,.ldr-ring,.ldr-sweep{animation:none}}
 </style>
+
+<div class="ldr" id="ldr" aria-hidden="true">
+  <div class="ldr-grid"></div>
+  <div class="ldr-ring"></div>
+  <div class="ldr-sweep"></div>
+  <div class="ldr-center">
+    <div class="ldr-logo"><b>宅建タワー</b></div>
+    <div class="ldr-sub">TAKKEN TOWER</div>
+    <div class="ldr-prog"><div class="ldr-bar"><i id="ldrBar"></i></div><div class="ldr-num" id="ldrNum">0</div></div>
+  </div>
+</div>
 
 <div class="wrap">
   <div class="hud" id="hud">
@@ -4805,12 +4856,48 @@ $("qQuit").addEventListener("click",()=>{
   else renderHome();
 });
 
+/* ══════════════════════════════════════════════════════
+   起動画面
+   0→100 を数えて、読み込みが済んだら上へスライドして消える。
+   数えとる間にアプリの準備が終わるけん、待たされる感じにはならん
+   ══════════════════════════════════════════════════════ */
+const LDR_MIN = 1300;              // 最低これだけは見せる（ミリ秒）
+let ldrPct = 0, ldrLeft = false, ldrReady = false, ldrT0 = Date.now();
+function ldrSet(p){
+  ldrPct = Math.max(ldrPct, Math.min(100, p));
+  const b=$("ldrBar"), n=$("ldrNum");
+  if(b) b.style.transform = "scaleX(" + (ldrPct/100) + ")";
+  if(n) n.textContent = Math.round(ldrPct);
+}
+/* 数字は時間で進める。準備が先に終わっても最後まで数え切ってから消す */
+function ldrTick(){
+  if(ldrLeft) return;
+  const t = (Date.now() - ldrT0) / LDR_MIN;
+  ldrSet(Math.min(ldrReady ? 100 : 92, t * 100));
+  if(ldrPct >= 100 && ldrReady) return ldrLeave();
+  requestAnimationFrame(ldrTick);
+}
+function ldrLeave(){
+  if(ldrLeft) return; ldrLeft = true;
+  ldrSet(100);
+  setTimeout(()=>{
+    const el=$("ldr"); if(!el) return;
+    el.classList.add("go");
+    setTimeout(()=>el.classList.add("off"), 950);
+  }, 200);
+}
+function ldrDone(){ ldrReady = true; }
+requestAnimationFrame(ldrTick);
+/* 保険：画面が裏に回っとってコマ送りが止まっても、5秒経ったら必ず消す */
+setTimeout(()=>{ ldrReady = true; ldrSet(100); ldrLeave(); }, 5000);
+
 function boot(){
   loadExtras();
   try{ ME=localStorage.getItem(ME_KEY); }catch(e){}
   if(!PLAYERS.some(p=>p.name===ME) && ME!==ADMIN.name) ME=null;
-  if(!ME){ startClock(); renderPick(true); return; }
+  if(!ME){ startClock(); renderPick(true); ldrDone(); return; }
   load(); ensureDaily(); ensureDay(); renderHome(); startClock();
+  ldrDone();
   pullMe().then(drawWeek);
 }
 boot();
