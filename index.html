@@ -607,6 +607,7 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
           <div class="plan-bar"><i id="planBar" style="width:0%"></i></div>
           <div class="plan-kv" id="planKv"></div>
         </div>
+        <div class="plan-pace" id="planPace"></div>
         <button class="plan-step three duel" id="planToday">
           <div class="plan-step-c">⚔</div>
           <div class="plan-step-b"><strong>きょうの対戦</strong><span id="planTodayS">全員おなじ10問。正解数と速さで勝負</span></div>
@@ -623,15 +624,11 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
           <div class="plan-step-n" id="planOxN">0/20</div>
         </button>
         <button class="plan-rank hidden" id="planRank" data-go="rank"></button>
-        <button class="plan-more" id="planMore">1日の量と弱点をくわしく ▾</button>
-        <div id="planDetail" class="hidden">
-          <div class="plan-pace" id="planPace"></div>
-          <div id="planCd"></div>
+        <div id="planCd"></div>
         <button class="plan-step review hidden" id="planS0">
           <div class="plan-step-b"><strong>復習だけやる</strong><span id="planS0s"></span></div>
           <div class="plan-step-n">復習</div>
         </button>
-        </div>
       </div>
     </div>
 
@@ -3110,11 +3107,6 @@ function renderPlan(){
               : "1位まで あと"+(wp.top-wp.mine+1)+"問";
     pr.innerHTML = '<span>🏆 今週 '+wp.pos+'位 / '+wp.n+'人　<small>'+wp.mine+'問正解</small></span><small>'+gap+' ›</small>';
   }else pr.classList.add("hidden");
-
-  $("planMore").onclick = ()=>{
-    const d=$("planDetail"), open=d.classList.toggle("hidden");
-    $("planMore").textContent = open ? "1日の量と弱点をくわしく ▾" : "とじる ▴";
-  };
 
   const mc=missList().length;
   $("planS0").classList.toggle("hidden", mc===0);
