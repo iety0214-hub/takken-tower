@@ -45,7 +45,7 @@
 .plan-h .eyebrow{color:#A79BD6}
 .plan-h h3{margin:3px 0 0;font-size:16px;font-weight:800;letter-spacing:.02em}
 .plan-badge{width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.10);display:grid;place-items:center;font-size:18px;flex:none}
-.plan-card{background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:13px}
+.plan-card{background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:13px;margin-bottom:10px}
 .plan-pred{display:flex;justify-content:space-between;align-items:center;gap:12px}
 .plan-pred b{font-size:15px;font-weight:700}
 .plan-pct{background:linear-gradient(150deg,#8E6BFF,#6A45D8);border-radius:12px;padding:7px 13px;text-align:center;flex:none}
@@ -599,7 +599,14 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
           <div class="plan-badge" id="planBadge">◎</div>
         </div>
         <div class="streak-note" id="streakNote"></div>
-        <div class="plan-pace" id="planPace"></div>
+        <div class="plan-card">
+          <div class="plan-pred">
+            <div><div class="eyebrow" style="color:#A79BD6">いまの仕上がり</div><b>合格予測</b></div>
+            <div class="plan-pct"><div class="v" id="planPct">--</div><div class="s" id="planGap">目安</div></div>
+          </div>
+          <div class="plan-bar"><i id="planBar" style="width:0%"></i></div>
+          <div class="plan-kv" id="planKv"></div>
+        </div>
         <button class="plan-step three duel" id="planToday">
           <div class="plan-step-c">⚔</div>
           <div class="plan-step-b"><strong>きょうの対戦</strong><span id="planTodayS">全員おなじ10問。正解数と速さで勝負</span></div>
@@ -616,16 +623,9 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
           <div class="plan-step-n" id="planOxN">0/20</div>
         </button>
         <button class="plan-rank hidden" id="planRank" data-go="rank"></button>
-        <button class="plan-more" id="planMore">仕上がりをくわしく ▾</button>
+        <button class="plan-more" id="planMore">1日の量と弱点をくわしく ▾</button>
         <div id="planDetail" class="hidden">
-          <div class="plan-card">
-            <div class="plan-pred">
-              <div><div class="eyebrow" style="color:#A79BD6">いまの仕上がり</div><b>合格予測</b></div>
-              <div class="plan-pct"><div class="v" id="planPct">--</div><div class="s" id="planGap">目安</div></div>
-            </div>
-            <div class="plan-bar"><i id="planBar" style="width:0%"></i></div>
-            <div class="plan-kv" id="planKv"></div>
-          </div>
+          <div class="plan-pace" id="planPace"></div>
           <div id="planCd"></div>
         <button class="plan-step review hidden" id="planS0">
           <div class="plan-step-b"><strong>復習だけやる</strong><span id="planS0s"></span></div>
@@ -3113,7 +3113,7 @@ function renderPlan(){
 
   $("planMore").onclick = ()=>{
     const d=$("planDetail"), open=d.classList.toggle("hidden");
-    $("planMore").textContent = open ? "仕上がりをくわしく ▾" : "とじる ▴";
+    $("planMore").textContent = open ? "1日の量と弱点をくわしく ▾" : "とじる ▴";
   };
 
   const mc=missList().length;
