@@ -240,6 +240,22 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
 .city{position:relative;margin:6px -16px 0;height:230px}
 .city canvas{display:block;width:100%;height:100%}
 .city-cap{position:absolute;left:16px;bottom:12px;right:16px;display:flex;align-items:flex-end;justify-content:space-between;gap:10px;text-shadow:0 1px 12px rgba(255,255,255,.9)}
+/* 街の上の円と球（AXIA JAPAN のトップと同じ作り）。
+   ゆっくり回りながら、ページを下げると寄ってきて大きく回る */
+.hero-ring{position:absolute;z-index:1;right:-64px;top:46%;width:min(62vw,300px);aspect-ratio:1/1;
+  pointer-events:none;
+  transform:translate3d(calc(var(--hp,0) * -120px), calc(-50% + var(--hp,0) * 60px), 0)
+            scale(calc(1 + var(--hp,0) * .18))}
+.hero-ring-in{position:absolute;inset:0;border:1.5px solid rgba(124,77,255,.38);border-radius:50%;
+  box-shadow:0 0 0 1px rgba(255,255,255,.35) inset;
+  transform:rotate(calc(var(--hp,0) * 280deg));animation:heroSpin 26s linear infinite}
+.hero-ring-in::before,.hero-ring-in::after{content:"";position:absolute;
+  border:1px solid rgba(124,77,255,.24);border-radius:50%}
+.hero-ring-in::before{inset:15%} .hero-ring-in::after{inset:34%}
+@keyframes heroSpin{100%{transform:rotate(calc(var(--hp,0) * 280deg + 360deg))}}
+.hero-dot{position:absolute;left:15%;top:26%;width:9px;height:9px;border-radius:50%;
+  background:var(--amber);box-shadow:0 0 0 8px rgba(124,77,255,.14),0 0 16px 3px rgba(124,77,255,.55)}
+@media (prefers-reduced-motion:reduce){.hero-ring-in{animation:none}}
 .city-adm{position:absolute;top:8px;right:16px;z-index:2;padding:9px 14px;border-radius:999px;border:1px solid var(--amber);background:var(--surface);color:var(--ink);font-size:13px;font-weight:900;box-shadow:0 4px 14px rgba(0,0,0,.18)}
 .city-title{font-size:20px}
 .city-sub{font-size:11px;color:#A9B6D2;letter-spacing:.06em}
@@ -633,6 +649,7 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
   <!-- ══ ホーム ══ -->
   <section id="sHome">
     <div class="city"><canvas id="cv"></canvas>
+      <div class="hero-ring" aria-hidden="true"><div class="hero-ring-in"><span class="hero-dot"></span></div></div>
       <button class="city-adm" data-go="admin" id="lnkAdmin" hidden>👀 みんなの進捗</button>
       <div class="city-cap">
         <div>
@@ -2778,6 +2795,16 @@ function bumpMission(kind,val,amount){
    ══════════════════════════════════════════════════════ */
 const cv=document.getElementById("cv"), ctx=cv.getContext("2d");
 function theme(){ return POOL.theme.find(t=>t.id===S.eq.theme)||POOL.theme[0]; }
+/* 街の絵の円。ホームを下にスクロールした分だけ 0→1 にして、円の寄りと回りに使う */
+let hpLast=0;
+function heroP(){
+  if($("sHome").classList.contains("hidden")) return;
+  const city=document.querySelector(".city"); if(!city) return;
+  const h=Math.max(1, city.offsetHeight);
+  const p=Math.min(1, Math.max(0, (scrollY||0)/h));
+  document.documentElement.style.setProperty("--hp", p.toFixed(3));
+}
+addEventListener("scroll",()=>{ const t=Date.now(); if(t-hpLast<40) return; hpLast=t; heroP(); },{passive:true});
 function drawCity(){
   const t=theme(), dpr=Math.min(window.devicePixelRatio||1,2);
   const w=cv.clientWidth, h=cv.clientHeight;
@@ -3166,7 +3193,7 @@ function renderPlan(){
 }
 
 function renderHome(){
-  ensureDaily(); ensureDay(); show("sHome"); drawCity();
+  ensureDaily(); ensureDay(); show("sHome"); drawCity(); heroP();
   renderPlan();
   drawDonut();
   const lit = POOL.theme.filter(t=>S.own.theme.includes(t.id)).length
