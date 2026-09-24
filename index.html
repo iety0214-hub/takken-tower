@@ -326,6 +326,23 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
 .qbar .btn{max-width:var(--maxw);margin:0 auto;pointer-events:auto;box-shadow:0 12px 30px -10px var(--amber)}
 /* 解説は正解と自分の答えだけ先に見せる */
 .exp-l li.fold{display:none}
+/* タイムアタックの振り返り */
+.tar-box{margin-top:18px;text-align:left}
+.tar-lead{margin:-2px 0 10px;font-size:12px;color:var(--muted);line-height:1.7}
+.tar-l{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.tar{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px}
+.tar.ng{border-color:rgba(242,73,107,.45)}
+.tar-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:7px}
+.tar-n{font-family:"Chivo Mono",monospace;font-size:11px;color:var(--muted)}
+.tar-m{font-size:11.5px;font-weight:900;padding:2px 9px;border-radius:99px}
+.tar-m.ok{color:var(--good);background:rgba(22,184,150,.12)} .tar-m.ng{color:var(--bad);background:rgba(242,73,107,.10)}
+.tar-a{font-size:11px;color:var(--muted);margin-left:auto}
+.tar-ctx{font-size:11px;color:var(--muted);line-height:1.6;margin-bottom:5px}
+.tar-q{font-size:13.5px;line-height:1.8;font-weight:700}
+.tar-e{margin-top:9px;padding:11px}
+.tar-more{margin-top:12px}
+.tar-more summary{cursor:pointer;font-size:12.5px;font-weight:700;color:var(--amber);padding:9px 12px;border:1px dashed var(--line-strong);border-radius:11px;background:var(--surface);list-style:none;text-align:center}
+.tar-more[open] summary{margin-bottom:10px}
 .exp-more{display:block;width:100%;margin-top:8px;padding:9px;border-radius:10px;border:1px dashed var(--line-strong);background:var(--surface);color:var(--muted);font:inherit;font-size:12px;cursor:pointer}
 .ch:hover:not(:disabled){border-color:var(--line-strong)}
 .ch:active:not(:disabled){transform:scale(.99)}
@@ -712,7 +729,7 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
         <button class="mode hot" data-go="stage"><div class="mode-ico">🏗</div><div class="mode-b"><strong>ステージ</strong><span id="stSub">科目を選んで10問。ライフ3</span></div><div class="mode-go">›</div></button>
         <button class="mode" data-go="ox"><div class="mode-ico">⭕</div><div class="mode-b"><strong>肢別 ○×</strong><span id="oxSub">1肢ずつ○か×か。20本で1セット</span></div><div class="mode-go">›</div></button>
         <button class="mode" data-go="blind"><div class="mode-ico">🙈</div><div class="mode-b"><strong>選択肢だけ</strong><span id="blSub">本文を伏せて4択。消去法のカンを鍛える</span></div><div class="mode-go">›</div></button>
-        <button class="mode" data-go="ta"><div class="mode-ico">⏱</div><div class="mode-b"><strong>タイムアタック</strong><span id="taSub">60秒で○×を何問正解できるか</span></div><div class="mode-go">›</div></button>
+        <button class="mode" data-go="ta"><div class="mode-ico">⏱</div><div class="mode-b"><strong>タイムアタック</strong><span id="taSub">60秒で○×を何問正解できるか。解説は終わってから</span></div><div class="mode-go">›</div></button>
         <button class="mode" data-go="pq"><div class="mode-ico">📜</div><div class="mode-b"><strong>鬼レベル模試</strong><span id="pqSub">2セットから選んで45問通し。週1回だけ</span></div><div class="mode-go">›</div></button>
       </div>
       <div class="links">
@@ -3252,8 +3269,8 @@ function renderHome(){
     : "本文を伏せて4択。消去法のカンを鍛える";
   const ts=$("taSub");
   if(ts) ts.textContent = S.bestTa
-    ? "自己ベスト "+S.bestTa+"問・60秒で○×を何問正解できるか"
-    : "60秒で○×を何問正解できるか";
+    ? "自己ベスト "+S.bestTa+"問・60秒で○×。解説は終わってから"
+    : "60秒で○×を何問正解できるか。解説は終わってから";
   const bp=hbp?"最高点 "+hbp.c+" / "+hbp.n+"・":"";
   const ps=$("pqSub");
   if(ps) ps.textContent = pqLocked()
@@ -3999,6 +4016,15 @@ function answerOx(pick){
       bumpMission("ta",null,1);
     }
     showCombo(G.combo);
+    /* 解説は終わってから振り返る。ここでは○×の色だけ見せて、すぐ次の問へ */
+    (G.log=G.log||[]).push({q, i:it.i, truth:it.truth, pick, ok});
+    paintStatus(); save();
+    const g=G;
+    setTimeout(()=>{
+      if(G!==g || G.left<=0 || $("sQuiz").classList.contains("hidden")) return;
+      G.i++; renderOx();
+    }, ok ? 260 : 650);                        // 間違えたときは正解の色を少し長めに見せる
+    return;
   }else{
     const m=meta(); m.ox=m.ox||{c:0,t:0}; m.ox.t++; if(ok) m.ox.c++;   // 肢別○×の通算はモード単体ぶんだけ
   }
@@ -4012,6 +4038,29 @@ function answerOx(pick){
     +'</div>';
   showNextBar();
   save();
+}
+/* タイムアタックの振り返り。間違えた肢を先に開いて出し、正解した肢はたたんでおく */
+function taReviewHtml(log){
+  if(!log.length) return '';
+  const card=(x,n)=>{
+    const q=x.q, src=(q.y?q.y+' 問'+q.n:q.src||'演習')+' の肢'+"アイウエ"[x.i];
+    return '<li class="tar'+(x.ok?' ok':' ng')+'">'
+      +'<div class="tar-h"><span class="tar-n">'+n+'</span>'
+        +'<span class="tar-m '+(x.ok?'ok':'ng')+'">'+(x.ok?'○ 正解':'× 不正解')+'</span>'
+        +'<span class="tar-a">あなた '+(x.pick?'○':'×')+' ／ 正しくは '+(x.truth?'○':'×')+'</span></div>'
+      +(oxContext(q)?'<div class="tar-ctx">'+oxContext(q)+'</div>':'')
+      +'<div class="tar-q">'+esc(chText(q.c[x.i]))+'</div>'
+      +'<div class="exp tar-e"><ol class="exp-l"><li class="'+(x.truth?"is-ans":"is-you")+'"><div class="t">'+fmtEc(q.ec[x.i])+'</div></li></ol>'
+        +(q.en?fmtEn(q.en):'')+'<p class="exp-n" style="border:0;padding-top:0;margin-top:6px !important">'+src+'</p></div>'
+      +'</li>';
+  };
+  const ng=log.map((x,i)=>[x,i+1]).filter(([x])=>!x.ok), ok=log.map((x,i)=>[x,i+1]).filter(([x])=>x.ok);
+  return '<div class="sec tar-box"><div class="sec-h"><h2>振り返り</h2><span class="eyebrow">'+log.length+'問中 '+ok.length+'問正解</span></div>'
+    +(ng.length
+      ? '<p class="tar-lead">間違えた '+ng.length+'問。解説を読んで、次の60秒で取り返そう</p><ol class="tar-l">'+ng.map(([x,n])=>card(x,n)).join('')+'</ol>'
+      : '<p class="tar-lead">全問正解。言うことなしやん</p>')
+    +(ok.length?'<details class="tar-more"><summary>正解した '+ok.length+'問の解説も見る</summary><ol class="tar-l">'+ok.map(([x,n])=>card(x,n)).join('')+'</ol></details>':'')
+    +'</div>';
 }
 function finishOx(){
   const asked=Math.max(1,G.answered), rate=Math.round(G.correct/asked*100);
@@ -4243,6 +4292,7 @@ function finish(){
     +'</div>'
     +(G.duel?'<div class="ticket-won"><div class="eyebrow" style="color:var(--amber)">タイム '+mmss((meta().duel||{}).sec||0)+'</div>'
         +'<div style="font-size:11.5px;color:var(--muted);margin-top:4px">同じ10問を解いた人と並べて比べられる</div></div>':'')
+    +(G.mode==="ta"?taReviewHtml(G.log||[]):'')
     +'<div class="stack">'
       +(G.duel?'<button class="btn btn-p" data-go="duel">⚔ みんなの結果を見る</button>'
         :'<button class="btn btn-p" id="rAgain">'+(G.mode==="ta"?"もう一度60秒":"もう一度")+'</button>')
