@@ -2953,10 +2953,22 @@ function show(id){
     else { history.pushState({s:id},""); navPushed=true; }
   }catch(e){}
 }
+/* 対戦（1日1回）と鬼レベル模試（週1回）は、やめたらその日・その週はもう挑めん。
+   Android の「戻る」（画面の端からのスワイプ）でうっかり終わらんように、必ず確かめる */
+const oneShot = ()=> G && (G.duel || G.mode==="pq");
+function quitMsg(){
+  return G.duel
+    ? "きょうの対戦をやめる？\nここまでの "+G.answered+"問で記録されて、きょうはもう挑めんっちゃ。"
+    : "鬼レベル模試をやめる？\nここまでの "+G.answered+"問で採点されて、今週はもう受けられんっちゃ。";
+}
 addEventListener("popstate",()=>{
   navPushed=false;
   if(!ME) return;
   const inQuiz=!$("sQuiz").classList.contains("hidden");
+  if(inQuiz && oneShot() && !confirm(quitMsg())){
+    try{ history.pushState({s:"sQuiz"},""); navPushed=true; }catch(e){}   // 戻るを取り消して、そのまま続ける
+    return;
+  }
   clearInterval(timerId);
   if(inQuiz && G && G.answered>0) finish();     // 解きかけは結果に反映してから戻る
   else renderHome();
@@ -4965,6 +4977,7 @@ $("hMe").addEventListener("click",()=>{ clearInterval(timerId); renderPick(false
 $("hCoin").parentElement.addEventListener("click",()=>{ if(ME){ clearInterval(timerId); renderGacha(); } });
 $("hTk").parentElement.addEventListener("click",()=>{ if(ME){ clearInterval(timerId); renderGacha(); } });
 $("qQuit").addEventListener("click",()=>{
+  if(oneShot() && !confirm(quitMsg())) return;
   clearInterval(timerId);
   if(G && G.answered>0) finish();   // ここまでの分は結果に反映する
   else renderHome();
