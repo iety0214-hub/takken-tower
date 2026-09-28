@@ -2953,22 +2953,22 @@ function show(id){
     else { history.pushState({s:id},""); navPushed=true; }
   }catch(e){}
 }
-/* 対戦（1日1回）と鬼レベル模試（週1回）は、やめたらその日・その週はもう挑めん。
-   Android の「戻る」（画面の端からのスワイプ）でうっかり終わらんように、必ず確かめる */
+/* 対戦（1日1回）と鬼レベル模試（週1回）は、途中でやめても確定させん。
+   そこまでを保存してホームに戻り、あとで続きから解ける */
 const oneShot = ()=> G && (G.duel || G.mode==="pq");
-function quitMsg(){
-  return G.duel
-    ? "きょうの対戦をやめる？\nここまでの "+G.answered+"問で記録されて、きょうはもう挑めんっちゃ。"
-    : "鬼レベル模試をやめる？\nここまでの "+G.answered+"問で採点されて、今週はもう受けられんっちゃ。";
+function pauseOneShot(){
+  clearInterval(timerId);
+  if(G.mode==="pq") pqSave();
+  save();
+  const left = G.duel ? (DUEL_N-G.answered)+"問" : (G.list.length-G.answered)+"問・残り "+mmss(G.left);
+  renderHome();
+  toast("途中まで保存した。続きは あと"+left);
 }
 addEventListener("popstate",()=>{
   navPushed=false;
   if(!ME) return;
   const inQuiz=!$("sQuiz").classList.contains("hidden");
-  if(inQuiz && oneShot() && !confirm(quitMsg())){
-    try{ history.pushState({s:"sQuiz"},""); navPushed=true; }catch(e){}   // 戻るを取り消して、そのまま続ける
-    return;
-  }
+  if(inQuiz && oneShot() && G.answered<G.list.length && !(G.mode==="pq" && G.timeUp)){ pauseOneShot(); return; }
   clearInterval(timerId);
   if(inQuiz && G && G.answered>0) finish();     // 解きかけは結果に反映してから戻る
   else renderHome();
@@ -3092,11 +3092,26 @@ function duelList(){
   });
 }
 function duelOf(r){ const d=(((r||{}).own||{}).meta||{}).duel; return (d && d.d===today()) ? d : null; }
-const duelDone = ()=> !!duelOf({own:S.own});
+/* 10問ぜんぶ解いたら「済み」。途中でやめた日は、同じ10問の続きから再開できる */
+const DUEL_N = 10;
+const duelDone = ()=>{ const d=duelOf({own:S.own}); return !!d && d.t>=DUEL_N; };
 function startDuel(){
   if(duelDone()) return renderDuel();
-  G={mode:"stage",cat:null,duel:true,list:duelList(),i:0,answered:0,correct:0,combo:0,maxCombo:0,lives:999,coin:0,t0:Date.now()};
+  const prev=duelOf({own:S.own}), list=duelList();
+  const k=prev ? Math.min(prev.t, list.length) : 0;
+  G={mode:"stage",cat:null,duel:true,list,i:k,answered:k,correct:prev?prev.c:0,combo:0,maxCombo:0,lives:999,coin:0,
+     t0:Date.now(), sec0:prev?(prev.sec||0):0};
   show("sQuiz"); renderQ();
+  if(k) toast("続きから　"+(k+1)+"問目");
+}
+/* 1問解くごとに記録する。アプリを閉じても、戻っても、そこまでは残る */
+function duelSave(ok){
+  const m=meta(), sec=Math.max(1, Math.round(G.sec0 + (Date.now()-G.t0)/1000));
+  m.duel={d:today(), c:G.correct, t:G.answered, sec};
+  if(!m.duelWk || m.duelWk.k!==weekKey()) m.duelWk={k:weekKey(),c:0,n:0};
+  m.duelAll=m.duelAll||{c:0,n:0};
+  if(ok){ m.duelWk.c++; m.duelAll.c++; }
+  if(G.answered>=G.list.length){ m.duelWk.n++; m.duelAll.n++; }
 }
 /* 対戦の並び。正解数が多い→速いの順。まだの人は下に */
 function duelOrder(rows){
@@ -3105,18 +3120,20 @@ function duelOrder(rows){
     const d = p.name===ME ? duelOf({own:S.own}) : duelOf(r);
     return {name:p.name, av:p.av, d};
   });
+  const grp=p=> !p.d ? 2 : p.d.t>=DUEL_N ? 0 : 1;          // 済み → 途中 → まだ
   return list.sort((a,b)=>{
-    if(!a.d && !b.d) return 0; if(!a.d) return 1; if(!b.d) return -1;
+    const ga=grp(a), gb=grp(b); if(ga!==gb) return ga-gb;
+    if(ga===2) return 0;
     return (b.d.c-a.d.c) || (a.d.sec-b.d.sec);
   });
 }
 async function renderDuel(){
   $("sRes").innerHTML=
     '<div class="sec-h" style="margin-top:18px"><h2>⚔ きょうの対戦</h2><span class="eyebrow">'+today()+'</span></div>'
-    +'<p style="font-size:12px;color:var(--muted);margin:0 0 12px;line-height:1.7">全員おなじ10問（ステージの問題から）。正解数が同じなら速いほうが上。解いた分は正答率にも入る。日付が変わったら次の10問っちゃ。</p>'
+    +'<p style="font-size:12px;color:var(--muted);margin:0 0 12px;line-height:1.7">全員おなじ10問（ステージの問題から）。正解数が同じなら速いほうが上。途中でやめても、その日のうちなら続きから解ける。解いた分は正答率にも入る。</p>'
     +'<div id="duelList"><div class="duel-row" style="justify-content:center;color:var(--muted);font-size:12.5px">読み込み中…</div></div>'
     +'<div class="stack">'
-      +(duelDone()?'':'<button class="btn btn-p" id="duelGo">⚔ 挑む（10問）</button>')
+      +(duelDone()?'':'<button class="btn btn-p" id="duelGo">'+(duelOf({own:S.own})?'⚔ 続きから（'+(duelOf({own:S.own}).t+1)+'問目）':'⚔ 挑む（10問）')+'</button>')
       +'<button class="btn btn-g" data-go="home">ホームへ</button></div>';
   show("sRes");
   const go=$("duelGo"); if(go) go.onclick=startDuel;
@@ -3126,11 +3143,12 @@ async function renderDuel(){
   let rank=0;
   const box=$("duelList"); if(!box) return;
   box.innerHTML=order.map((p,i)=>{
-    if(p.d) rank=i+1;
-    return '<div class="duel-row'+(p.name===ME?' me':'')+(p.d?' p'+rank:' yet')+'">'
-      +'<div class="n">'+(p.d?rank:'–')+'</div><div class="av">'+p.av+'</div>'
+    const full = p.d && p.d.t>=DUEL_N;
+    if(full) rank=i+1;
+    return '<div class="duel-row'+(p.name===ME?' me':'')+(full?' p'+rank:' yet')+'">'
+      +'<div class="n">'+(full?rank:'–')+'</div><div class="av">'+p.av+'</div>'
       +'<div class="b"><strong>'+p.name+(p.name===ME?' <span style="font-size:10px;color:var(--amber)">じぶん</span>':'')+'</strong>'
-        +'<span>'+(p.d?(p.d.t<10?p.d.t+'問で終了':'10問')+'　'+mmss(p.d.sec||0):'まだ解いとらん')+'</span></div>'
+        +'<span>'+(p.d?(full?DUEL_N+'問':'途中 '+p.d.t+' / '+DUEL_N)+'　'+mmss(p.d.sec||0):'まだ解いとらん')+'</span></div>'
       +'<div class="v">'+(p.d?p.d.c+'<small>/ '+p.d.t+'</small>':'—')+'</div></div>';
   }).join("") + (rows?'':'<p style="font-size:11px;color:var(--muted);margin:6px 2px 0">ネットにつながっとらんけん、みんなの分は取れんかった</p>');
 }
@@ -3215,8 +3233,10 @@ function renderPlan(){
     el.querySelector(".plan-step-b span").textContent = sub;
     el.querySelector(".plan-step-n").textContent = n;
   };
-  const dd=duelOf({own:S.own}), d1=!!dd;
-  if(dd){
+  const dd=duelOf({own:S.own}), d1=duelDone();
+  if(dd && !d1){
+    step("planToday", false, "途中 "+dd.t+" / "+DUEL_N+"　続きから解ける", "続き");
+  }else if(dd){
     const o=TEAM ? duelOrder(TEAM) : null;
     const pos=o ? o.findIndex(p=>p.name===ME)+1 : 0;
     step("planToday", true, dd.c+" / "+dd.t+"　"+mmss(dd.sec||0)+(pos?"　いま"+pos+"位":"")+"　結果を見る", "済み");
@@ -3285,7 +3305,9 @@ function renderHome(){
     : "60秒で○×を何問正解できるか。解説は終わってから";
   const bp=hbp?"最高点 "+hbp.c+" / "+hbp.n+"・":"";
   const ps=$("pqSub");
-  if(ps) ps.textContent = pqLocked()
+  const hpr=pqProg();
+  if(ps && hpr) ps.textContent = "解きかけ "+hpr.k+" / 45・続きから（残り "+mmss(hpr.left)+"）";
+  else if(ps) ps.textContent = pqLocked()
     ? bp+"今週はもう受けとる。次は"+toNextWeek()+"後"
     : bp ? bp+"45問通し・週1回だけ"
          : "45問通し・週1回だけ。"+PQ_PASS+"問以上でレジェンド券";
@@ -3347,6 +3369,20 @@ function pqLocked(){ return meta().pqWeek === weekKey(); }
 
 function choosePq(){
   const years=[...new Set(PQ.map(q=>q.y))];
+  const pr=pqProg();
+  if(pr){
+    $("sRes").innerHTML =
+      '<div class="sec-h" style="margin-top:18px"><h2>鬼レベル模試</h2><span class="eyebrow">解きかけ</span></div>'
+      +'<div class="card" style="text-align:center;padding:24px 18px">'
+        +'<div style="font-size:30px">📜</div>'
+        +'<div class="dsp" style="font-size:17px;margin-top:10px">'+pr.year+'</div>'
+        +'<div class="num" style="font-size:13px;margin-top:8px">'+pr.k+' / 45問　正解 '+pr.c+'　残り '+mmss(pr.left)+'</div>'
+        +'<div style="font-size:12px;color:var(--muted);margin-top:10px;line-height:1.8">やめとる間は時間も止まっとる。問'+(pr.k+1)+'から再開するっちゃ</div>'
+      +'</div>'
+      +'<div class="stack"><button class="btn btn-p" id="pqResume">続きから解く</button>'
+      +'<button class="btn btn-g" data-go="home">もどる</button></div>';
+    show("sRes"); $("pqResume").onclick=()=>startPq(pr.year); return;
+  }
   if(pqLocked()){
     $("sRes").innerHTML =
       '<div class="sec-h" style="margin-top:18px"><h2>鬼レベル模試</h2><span class="eyebrow">週1回まで</span></div>'
@@ -3380,27 +3416,37 @@ function choosePq(){
       +'本試験の難問を寄せ集めた45問セット。令和8年4月1日施行の法令に合わせて改訂してある。<br>'
       +'問46〜50の5点免除科目は入れとらん。90問すべてに肢ごとの解説が付いとる。<br>'
       +'<b style="color:var(--amber)">受けられるのは週に1回だけ。'+PQ_PASS+'問以上でレジェンド券がもらえる。</b><br>'
-      +'本試験と同じ配分で<b>制限時間108分</b>（50問120分の45問ぶん）。時間切れはそこで終了。<br>'
+      +'本試験と同じ配分で<b>制限時間108分</b>（50問120分の45問ぶん）。途中でやめたら時間も止まって、続きから解ける。<br>'
       +'本試験17回分そのものは、ステージとタイムアタックに入っとる。'
     +'</div>'
     +'<div class="stack"><button class="btn btn-g" data-go="home">もどる</button></div>';
   show("sRes");
   $("sRes").querySelectorAll("[data-year]").forEach(b=>b.addEventListener("click",()=>startPq(b.dataset.year)));
 }
+/* 今週の解きかけ。own.meta.pq = {wk, year, k:解いた数, c:正解, left:残り秒, byCat, mx:最大コンボ} */
+function pqProg(){ const p=meta().pq; return (p && p.wk===weekKey() && p.k>0) ? p : null; }
+function pqSave(){
+  meta().pq={wk:weekKey(), year:G.year, k:G.answered, c:G.correct, left:G.left, byCat:G.byCat||{}, mx:G.maxCombo};
+}
 function startPq(year){
-  if(pqLocked()) return choosePq();
+  const pr=pqProg();
+  if(pr) year=pr.year;                                  // 解きかけがあれば必ずその続き
+  else if(pqLocked()) return choosePq();
   meta().pqWeek = weekKey();          // 始めた時点で今週分を使ったことにする
   save();
   const list=PQ.filter(q=>q.y===year).slice().sort((a,b)=>a.n-b.n);
-  /* 本試験は50問120分。45問ぶんに按分して108分。時間切れはそこで終了 */
+  /* 本試験は50問120分。45問ぶんに按分して108分。途中でやめたら時間も止まる */
   const limit = Math.round(120*60*list.length/50);
-  G={mode:"pq",year,list,i:0,answered:0,correct:0,combo:0,maxCombo:0,lives:0,coin:0,log:[],left:limit};
+  const k = pr ? Math.min(pr.k, list.length) : 0;
+  G={mode:"pq",year,list,i:k,answered:k,correct:pr?pr.c:0,combo:0,maxCombo:pr?(pr.mx||0):0,lives:0,coin:0,log:[],
+     left:pr?pr.left:limit, byCat:pr?(pr.byCat||{}):{}};
   show("sQuiz"); renderQ();
+  if(k) toast("続きから　問"+(k+1)+"（残り "+mmss(G.left)+"）");
   clearInterval(timerId);
   timerId=setInterval(()=>{
     G.left--; paintStatus();
     if(G.left===300) toast("⏱ 残り5分");
-    if(G.left<=0){ clearInterval(timerId); toast("時間切れ"); finish(); }
+    if(G.left<=0){ clearInterval(timerId); toast("時間切れ"); G.timeUp=true; finish(); }
   },1000);
 }
 const mmss = sec => Math.floor(sec/60)+":"+String(sec%60).padStart(2,"0");
@@ -3561,7 +3607,7 @@ function planChunk(){
   const N = G.mode==="ta" ? start+PLAN_CHUNK : Math.max(start+1, L.length);
   const at = k => L[k % L.length];
 
-  const canReorder = G.mode!=="pq" && start < L.length;
+  const canReorder = G.mode!=="pq" && !G.duel && start < L.length;   // 模試と対戦は順番を守る（対戦は全員同じ順・途中から再開しても同じ問）
   const reorder = () => {
     const end=Math.min(N, L.length);
     const part=L.slice(start,end);
@@ -4180,6 +4226,8 @@ function answer(pick){
         +(mult>1?'<span class="gain-p">コンボ ×'+mult+'</span>':'')+'</div>':'')
     +'</div>';
   foldExp(); showNextBar();
+  if(G.duel) duelSave(ok);
+  if(G.mode==="pq") pqSave();
   save();
 }
 function atEnd(){
@@ -4225,7 +4273,8 @@ function finish(){
   const asked = Math.max(1, G.answered);
   const rate = Math.round(G.correct/asked*100);
   const cleared = G.mode==="stage" && !G.review && G.lives>0 && G.i>=G.list.length-1;
-  const pqDone  = G.mode==="pq" && G.i>=G.list.length-1;
+  const pqDone  = G.mode==="pq" && (G.i>=G.list.length-1 || G.timeUp);
+  if(pqDone) delete meta().pq;
   let bonusCoin = cleared?80:(pqDone?300:0);
   if(cleared) bumpMission("clear",null,1);
   // 合格ラインは登録講習修了者の基準（45問中28問）。出題ミスで除外した問がある回は問数に応じて按分する
@@ -4248,14 +4297,6 @@ function finish(){
   if(G.mode==="ta" && asked>=5 && G.correct>S.bestTa){
     S.bestTa=G.correct; taBest=true;
     taTk=rollTier(myRank()); S.tk[taTk]++;
-  }
-  if(G.duel && G.answered>0 && !duelDone()){
-    const m=meta();
-    m.duel={d:today(),c:G.correct,t:G.answered,sec:Math.max(1,Math.round((Date.now()-(G.t0||Date.now()))/1000))};
-    /* 順位表の「⚔対戦」軸。今週の合計正解と、通算の合計正解 */
-    if(!m.duelWk || m.duelWk.k!==weekKey()) m.duelWk={k:weekKey(),c:0,n:0};
-    m.duelWk.c+=G.correct; m.duelWk.n++;
-    m.duelAll=m.duelAll||{c:0,n:0}; m.duelAll.c+=G.correct; m.duelAll.n++;
   }
   addCoin(G.coin+bonusCoin);
   const ups=!!G.rankUp;
@@ -4977,7 +5018,7 @@ $("hMe").addEventListener("click",()=>{ clearInterval(timerId); renderPick(false
 $("hCoin").parentElement.addEventListener("click",()=>{ if(ME){ clearInterval(timerId); renderGacha(); } });
 $("hTk").parentElement.addEventListener("click",()=>{ if(ME){ clearInterval(timerId); renderGacha(); } });
 $("qQuit").addEventListener("click",()=>{
-  if(oneShot() && !confirm(quitMsg())) return;
+  if(oneShot() && G.answered<G.list.length){ pauseOneShot(); return; }
   clearInterval(timerId);
   if(G && G.answered>0) finish();   // ここまでの分は結果に反映する
   else renderHome();
